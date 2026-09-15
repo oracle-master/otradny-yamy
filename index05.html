@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Карта ям Отрадного</title>
+    <meta name="theme-color" content="#1a1a2e">
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .header {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            z-index: 1000;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            padding: 12px 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            background: linear-gradient(135deg, #f0e8ff 0%, #a098c0 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            white-space: nowrap;
+        }
+
+        .header-badge {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #e0d8f0;
+            white-space: nowrap;
+        }
+
+        .header-badge.online { color: #7dffa0; border-color: rgba(125, 255, 160, 0.4); }
+        .header-badge.offline { color: #ff8a8a; border-color: rgba(255, 138, 138, 0.4); }
+
+        #map {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .bottom-panel {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            z-index: 1000;
+            background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1e 100%);
+            color: #fff;
+            padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .panel-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .stats { display: flex; flex-direction: column; gap: 2px; }
+
+        .stats-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #8a80a8;
+        }
+
+        .stats-value {
+            font-size: 22px;
+            font-weight: 700;
+            color: #f0e8ff;
+            text-shadow: 0 0 15px rgba(200, 180, 240, 0.5);
+        }
+
+        .add-btn {
+            background: linear-gradient(135deg, #6a5acd 0%, #483d8b 100%);
+            border: none;
+            color: #fff;
+            padding: 12px 20px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(106, 90, 205, 0.5);
+            transition: transform 0.2s, box-shadow 0.2s;
+            white-space: nowrap;
+        }
+
+        .add-btn:active { transform: scale(0.95); }
+
+        .clear-btn {
+            background: transparent;
+            border: 1px solid rgba(255, 71, 87, 0.5);
+            color: #ff6b7a;
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .pothole-marker {
+            background: #ff4757;
+            border: 3px solid #fff;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            box-shadow: 0 0 15px rgba(255, 71, 87, 0.8);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 15px rgba(255, 71, 87, 0.8); }
+            50% { box-shadow: 0 0 25px rgba(255, 71, 87, 1); }
+        }
+
+        .toast {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            z-index: 2000;
+            background: rgba(26, 26, 46, 0.95);
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 30px;
+            border: 1px solid rgba(160, 152, 192, 0.5);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+            font-size: 14px;
+            font-weight: 600;
+            opacity: 0;
+            transition: transform 0.4s ease, opacity 0.4s ease;
+            pointer-events: none;
+            white-space: nowrap;
+            max-width: 90%;
+            text-align: center;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        .hint {
+            position: absolute;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 999;
+            background: rgba(26, 26, 46, 0.9);
+            color: #e0d8f0;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            border: 1px solid rgba(160, 152, 192, 0.3);
+            transition: opacity 0.5s;
+            white-space: nowrap;
+        }
+
+        .hint.hidden { opacity: 0; pointer-events: none; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="header-title">🗺️ Карта ям Отрадного</div>
+        <div class="header-badge" id="headerBadge">Подключение...</div>
+    </div>
+
+    <div class="hint" id="hint">Нажми «+ Добавить яму» и ткни в карту</div>
+
+    <div id="map"></div>
+
+    <div class="bottom-panel">
+        <div class="panel-row">
+            <div class="stats">
+                <div class="stats-label">Ям на карте</div>
+                <div class="stats-value" id="potholeCount">0</div>
+            </div>
+            <button class="add-btn" id="addBtn">+ Добавить яму</button>
+        </div>
+        <div class="panel-row">
+            <button class="clear-btn" id="clearBtn">🗑 Очистить мои</button>
+            <div style="font-size: 10px; color: #6a6088;" id="statusText">Облако Supabase</div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ===== НАСТРОЙКИ SUPABASE =====
+        var SUPABASE_URL = 'https://xmajdholmfhuizavwhmr.supabase.co';
+        var SUPABASE_KEY = 'sb_publishable_QF7Ss8n3vhlbe70iJv4tKA_2dy8ijnS';
+        var TABLE_NAME = 'potholes';
+
+        // ===== КООРДИНАТЫ ОТРАДНОГО =====
+        var OTRADNY_CENTER = [53.378, 51.334];
+        var OTRADNY_ZOOM = 14;
+
+        // ===== ИНИЦИАЛИЗАЦИЯ КАРТЫ =====
+        var map = L.map('map', { zoomControl: false }).setView(OTRADNY_CENTER, OTRADNY_ZOOM);
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        // ===== СОСТОЯНИЕ =====
+        var potholes = [];
+        var addingMode = false;
+
+        // ===== ЭЛЕМЕНТЫ =====
+        var addBtn = document.getElementById('addBtn');
+        var clearBtn = document.getElementById('clearBtn');
+        var potholeCountEl = document.getElementById('potholeCount');
+        var toastEl = document.getElementById('toast');
+        var hintEl = document.getElementById('hint');
+        var headerBadge = document.getElementById('headerBadge');
+        var statusText = document.getElementById('statusText');
+
+        // ===== ФУНКЦИИ =====
+        function showToast(text) {
+            toastEl.textContent = text;
+            toastEl.classList.add('show');
+            setTimeout(function() { toastEl.classList.remove('show'); }, 2500);
+        }
+
+        function updateCounter() {
+            potholeCountEl.textContent = potholes.length;
+        }
+
+        function setOnline(isOnline) {
+            if (isOnline) {
+                headerBadge.textContent = 'В сети';
+                headerBadge.className = 'header-badge online';
+                statusText.textContent = 'Облако Supabase';
+                statusText.style.color = '#6a6088';
+            } else {
+                headerBadge.textContent = 'Оффлайн';
+                headerBadge.className = 'header-badge offline';
+                statusText.textContent = 'Нет связи с облаком';
+                statusText.style.color = '#ff8a8a';
+            }
+        }
+
+        // ===== ЗАГРУЗКА ЯМ ИЗ SUPABASE =====
+        function loadFromCloud() {
+            statusText.textContent = 'Загрузка из облака...';
+            
+            fetch(SUPABASE_URL + '/rest/v1/' + TABLE_NAME + '?select=*&order=created_at.desc', {
+                method: 'GET',
+                headers: {
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': 'Bearer ' + SUPABASE_KEY
+                }
+            })
+            .then(function(response) {
+                if (!response.ok) throw new Error('Ошибка загрузки: ' + response.status);
+                return response.json();
+            })
+            .then(function(data) {
+                // Очищаем текущие маркеры
+                potholes.forEach(function(p) {
+                    if (p.marker) map.removeLayer(p.marker);
+                });
+                potholes = [];
+
+                // Добавляем ямы из облака
+                data.forEach(function(row) {
+                    var marker = createMarker(row.lat, row.lng, row.description, row.id);
+                    potholes.push({
+                        id: row.id,
+                        lat: row.lat,
+                        lng: row.lng,
+                        description: row.description,
+                        marker: marker
+                    });
+                });
+
+                updateCounter();
+                setOnline(true);
+                showToast('☁️ Загружено ям: ' + potholes.length);
+            })
+            .catch(function(error) {
+                console.error('Ошибка загрузки:', error);
+                setOnline(false);
+                showToast('⚠️ Не удалось загрузить ямы');
+            });
+        }
+
+        // ===== СОХРАНЕНИЕ ЯМЫ В SUPABASE =====
+        function saveToCloud(lat, lng, description) {
+            return fetch(SUPABASE_URL + '/rest/v1/' + TABLE_NAME, {
+                method: 'POST',
+                headers: {
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': 'Bearer ' + SUPABASE_KEY,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=representation'
+                },
+                body: JSON.stringify({
+                    lat: lat,
+                    lng: lng,
+                    description: description
+                })
+            })
+            .then(function(response) {
+                if (!response.ok) throw new Error('Ошибка сохранения: ' + response.status);
+                return response.json();
+            })
+            .then(function(data) {
+                return data[0];
+            });
+        }
+
+        // ===== УДАЛЕНИЕ ЯМЫ ИЗ SUPABASE =====
+        function deleteFromCloud(id) {
+            return fetch(SUPABASE_URL + '/rest/v1/' + TABLE_NAME + '?id=eq.' + id, {
+                method: 'DELETE',
+                headers: {
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': 'Bearer ' + SUPABASE_KEY
+                }
+            });
+        }
+
+        // ===== СОЗДАНИЕ МАРКЕРА =====
+        function createMarker(lat, lng, description, id) {
+            var icon = L.divIcon({
+                className: '',
+                html: '<div class="pothole-marker"></div>',
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            });
+
+            var marker = L.marker([lat, lng], { icon: icon }).addTo(map);
+
+            var popupContent = 
+                '<div style="min-width: 180px;">' +
+                    '<b>' + description + '</b><br>' +
+                    '<small style="color: #888;">' + lat.toFixed(5) + ', ' + lng.toFixed(5) + '</small><br>' +
+                    '<button onclick="deletePothole(' + id + ')" ' +
+                    'style="margin-top: 8px; background: #ff4757; color: white; border: none; ' +
+                    'padding: 6px 12px; border-radius: 15px; font-size: 12px; cursor: pointer;">' +
+                    '🗑 Удалить</button>' +
+                '</div>';
+
+            marker.bindPopup(popupContent);
+            return marker;
+        }
+
+        // ===== УДАЛЕНИЕ ЯМЫ (глобальная функция) =====
+        window.deletePothole = function(id) {
+            if (!confirm('Удалить эту яму?')) return;
+
+            deleteFromCloud(id)
+                .then(function() {
+                    var index = potholes.findIndex(function(p) { return p.id === id; });
+                    if (index !== -1) {
+                        map.removeLayer(potholes[index].marker);
+                        potholes.splice(index, 1);
+                    }
+                    updateCounter();
+                    showToast('🗑 Яма удалена');
+                })
+                .catch(function(error) {
+                    console.error(error);
+                    showToast('⚠️ Не удалось удалить');
+                });
+        };
+
+        // ===== ДОБАВЛЕНИЕ ЯМЫ =====
+        addBtn.addEventListener('click', function() {
+            addingMode = !addingMode;
+
+            if (addingMode) {
+                addBtn.textContent = '✕ Отмена';
+                addBtn.style.background = 'linear-gradient(135deg, #ff4757 0%, #c0392b 100%)';
+                hintEl.classList.remove('hidden');
+                hintEl.textContent = 'Ткни в карту в месте ямы';
+            } else {
+                addBtn.textContent = '+ Добавить яму';
+                addBtn.style.background = 'linear-gradient(135deg, #6a5acd 0%, #483d8b 100%)';
+                hintEl.classList.add('hidden');
+            }
+        });
+
+        // ===== КЛИК ПО КАРТЕ =====
+        map.on('click', function(e) {
+            if (!addingMode) return;
+
+            var lat = e.latlng.lat;
+            var lng = e.latlng.lng;
+
+            var description = prompt('Что здесь? (например: большая яма)', 'Яма №' + (potholes.length + 1));
+            if (!description) return;
+
+            // Отправляем в облако
+            saveToCloud(lat, lng, description)
+                .then(function(row) {
+                    var marker = createMarker(row.lat, row.lng, row.description, row.id);
+                    potholes.push({
+                        id: row.id,
+                        lat: row.lat,
+                        lng: row.lng,
+                        description: row.description,
+                        marker: marker
+                    });
+                    updateCounter();
+                    showToast('✅ Яма сохранена в облако');
+                })
+                .catch(function(error) {
+                    console.error(error);
+                    showToast('⚠️ Не удалось сохранить');
+                });
+
+            addingMode = false;
+            addBtn.textContent = '+ Добавить яму';
+            addBtn.style.background = 'linear-gradient(135deg, #6a5acd 0%, #483d8b 100%)';
+            hintEl.classList.add('hidden');
+        });
+
+        // ===== ОЧИСТИТЬ МОИ (только локальные) =====
+        clearBtn.addEventListener('click', function() {
+            if (potholes.length === 0) {
+                showToast('Карта уже пустая');
+                return;
+            }
+            if (!confirm('Скрыть все ямы с этой карты?\n(В облаке они останутся)')) return;
+
+            potholes.forEach(function(p) { map.removeLayer(p.marker); });
+            potholes = [];
+            updateCounter();
+            showToast('Скрыто с карты');
+        });
+
+        // ===== ЗАПУСК =====
+        loadFromCloud();
+
+        setTimeout(function() { hintEl.classList.add('hidden'); }, 5000);
+    </script>
+
+</body>
+</html>
