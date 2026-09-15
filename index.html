@@ -19,22 +19,29 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
 
+        /* ===== ШАПКА ===== */
         .header {
             position: absolute;
             top: 0; left: 0; right: 0;
             z-index: 1000;
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             color: #fff;
-            padding: 12px 16px;
+            padding: 10px 12px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .header-top {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 10px;
+            gap: 8px;
         }
 
         .header-title {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 700;
             letter-spacing: 0.5px;
             background: linear-gradient(135deg, #f0e8ff 0%, #a098c0 100%);
@@ -48,8 +55,8 @@
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 20px;
-            padding: 4px 12px;
-            font-size: 12px;
+            padding: 3px 10px;
+            font-size: 11px;
             font-weight: 600;
             color: #e0d8f0;
             white-space: nowrap;
@@ -58,6 +65,47 @@
         .header-badge.online { color: #7dffa0; border-color: rgba(125, 255, 160, 0.4); }
         .header-badge.offline { color: #ff8a8a; border-color: rgba(255, 138, 138, 0.4); }
 
+        /* ===== ПОИСК ===== */
+        .search-box {
+            display: flex;
+            gap: 6px;
+        }
+
+        .search-input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 8px 14px;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .search-input::placeholder { color: #8a80a8; }
+
+        .search-input:focus {
+            border-color: rgba(160, 152, 192, 0.6);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .search-btn {
+            background: linear-gradient(135deg, #6a5acd 0%, #483d8b 100%);
+            border: none;
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: transform 0.2s;
+        }
+
+        .search-btn:active { transform: scale(0.95); }
+
+        /* ===== КАРТА ===== */
         #map {
             position: absolute;
             top: 0; left: 0;
@@ -66,24 +114,25 @@
             z-index: 1;
         }
 
+        /* ===== НИЖНЯЯ ПАНЕЛЬ ===== */
         .bottom-panel {
             position: absolute;
             bottom: 0; left: 0; right: 0;
             z-index: 1000;
             background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1e 100%);
             color: #fff;
-            padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+            padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
             box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
         }
 
         .panel-row {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 12px;
+            gap: 10px;
         }
 
         .stats { display: flex; flex-direction: column; gap: 2px; }
@@ -113,7 +162,7 @@
             letter-spacing: 0.5px;
             cursor: pointer;
             box-shadow: 0 4px 15px rgba(106, 90, 205, 0.5);
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: transform 0.2s;
             white-space: nowrap;
         }
 
@@ -131,6 +180,7 @@
             white-space: nowrap;
         }
 
+        /* ===== МАРКЕРЫ ЯМ ===== */
         .pothole-marker {
             background: #ff4757;
             border: 3px solid #fff;
@@ -146,9 +196,34 @@
             50% { box-shadow: 0 0 25px rgba(255, 71, 87, 1); }
         }
 
+        /* ===== СИНЯЯ КАПЛЯ (Я ЗДЕСЬ) ===== */
+        .my-location-marker {
+            background: #4285f4;
+            border: 3px solid #fff;
+            border-radius: 50% 50% 50% 0;
+            width: 24px;
+            height: 24px;
+            transform: rotate(-45deg);
+            box-shadow: 0 0 15px rgba(66, 133, 244, 0.8);
+            position: relative;
+        }
+
+        .my-location-marker::after {
+            content: '';
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #fff;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(45deg);
+        }
+
+        /* ===== УВЕДОМЛЕНИЕ ===== */
         .toast {
             position: absolute;
-            top: 80px;
+            top: 130px;
             left: 50%;
             transform: translateX(-50%) translateY(-100px);
             z-index: 2000;
@@ -173,9 +248,10 @@
             opacity: 1;
         }
 
+        /* ===== ПОДСКАЗКА ===== */
         .hint {
             position: absolute;
-            top: 70px;
+            top: 125px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 999;
@@ -195,8 +271,14 @@
 <body>
 
     <div class="header">
-        <div class="header-title">🗺️ Карта ям Отрадного</div>
-        <div class="header-badge" id="headerBadge">Подключение...</div>
+        <div class="header-top">
+            <div class="header-title">🗺️ Карта ям Отрадного</div>
+            <div class="header-badge" id="headerBadge">Подключение...</div>
+        </div>
+        <div class="search-box">
+            <input type="text" class="search-input" id="searchInput" placeholder="Ленина 15, школа №5, Озон...">
+            <button class="search-btn" id="searchBtn">🔍</button>
+        </div>
     </div>
 
     <div class="hint" id="hint">Нажми «+ Добавить яму» и ткни в карту</div>
@@ -213,7 +295,7 @@
         </div>
         <div class="panel-row">
             <button class="clear-btn" id="clearBtn">🗑 Очистить мои</button>
-            <div style="font-size: 10px; color: #6a6088;" id="statusText">Облако Supabase</div>
+            <button class="clear-btn" id="locateBtn" style="border-color: rgba(66,133,244,0.5); color: #7aa7ff;">📍 Я здесь</button>
         </div>
     </div>
 
@@ -228,6 +310,7 @@
         // ===== КООРДИНАТЫ ОТРАДНОГО =====
         var OTRADNY_CENTER = [53.378, 51.334];
         var OTRADNY_ZOOM = 14;
+        var CITY_SUFFIX = ', Отрадный, Самарская область';
 
         // ===== ИНИЦИАЛИЗАЦИЯ КАРТЫ =====
         var map = L.map('map', { zoomControl: false }).setView(OTRADNY_CENTER, OTRADNY_ZOOM);
@@ -241,15 +324,20 @@
         // ===== СОСТОЯНИЕ =====
         var potholes = [];
         var addingMode = false;
+        var myLocationMarker = null;
+        var myLocationCircle = null;
+        var searchMarker = null;
 
         // ===== ЭЛЕМЕНТЫ =====
         var addBtn = document.getElementById('addBtn');
         var clearBtn = document.getElementById('clearBtn');
+        var locateBtn = document.getElementById('locateBtn');
         var potholeCountEl = document.getElementById('potholeCount');
         var toastEl = document.getElementById('toast');
         var hintEl = document.getElementById('hint');
         var headerBadge = document.getElementById('headerBadge');
-        var statusText = document.getElementById('statusText');
+        var searchInput = document.getElementById('searchInput');
+        var searchBtn = document.getElementById('searchBtn');
 
         // ===== ФУНКЦИИ =====
         function showToast(text) {
@@ -266,20 +354,125 @@
             if (isOnline) {
                 headerBadge.textContent = 'В сети';
                 headerBadge.className = 'header-badge online';
-                statusText.textContent = 'Облако Supabase';
-                statusText.style.color = '#6a6088';
             } else {
                 headerBadge.textContent = 'Оффлайн';
                 headerBadge.className = 'header-badge offline';
-                statusText.textContent = 'Нет связи с облаком';
-                statusText.style.color = '#ff8a8a';
             }
         }
 
+        // ===== ГЕОЛОКАЦИЯ =====
+        locateBtn.addEventListener('click', function() {
+            if (!navigator.geolocation) {
+                showToast('⚠️ Геолокация не поддерживается');
+                return;
+            }
+
+            showToast('📍 Определяю...');
+
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    var lat = position.coords.latitude;
+                    var lng = position.coords.longitude;
+                    var accuracy = position.coords.accuracy;
+
+                    // Убираем старый маркер
+                    if (myLocationMarker) map.removeLayer(myLocationMarker);
+                    if (myLocationCircle) map.removeLayer(myLocationCircle);
+
+                    // Синяя капля (как в Яндексе)
+                    var myIcon = L.divIcon({
+                        className: '',
+                        html: '<div class="my-location-marker"></div>',
+                        iconSize: [24, 24],
+                        iconAnchor: [12, 24]
+                    });
+
+                    myLocationMarker = L.marker([lat, lng], { icon: myIcon }).addTo(map);
+
+                    // Круг точности
+                    myLocationCircle = L.circle([lat, lng], {
+                        radius: accuracy,
+                        color: '#4285f4',
+                        fillColor: '#4285f4',
+                        fillOpacity: 0.15,
+                        weight: 1
+                    }).addTo(map);
+
+                    // Перелёт
+                    map.flyTo([lat, lng], 17, { duration: 1.5 });
+
+                    showToast('📍 Найдено! Точность: ±' + Math.round(accuracy) + ' м');
+                },
+                function(error) {
+                    var msg = '⚠️ Ошибка геолокации';
+                    if (error.code === 1) msg = '⚠️ Разрешите доступ к геолокации';
+                    if (error.code === 2) msg = '⚠️ Не удалось определить';
+                    if (error.code === 3) msg = '⚠️ Превышено время';
+                    showToast(msg);
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        });
+
+        // ===== ПОИСК ПО АДРЕСУ =====
+        function searchAddress() {
+            var query = searchInput.value.trim();
+            if (!query) {
+                showToast('⚠️ Введите адрес');
+                return;
+            }
+
+            // Убираем старый маркер поиска
+            if (searchMarker) map.removeLayer(searchMarker);
+
+            showToast('🔍 Ищу...');
+
+            // Добавляем город к запросу
+            var fullQuery = query + CITY_SUFFIX;
+            var url = 'https://nominatim.openstreetmap.org/search?format=json&limit=5&q=' + encodeURIComponent(fullQuery);
+
+            fetch(url, {
+                headers: { 'Accept-Language': 'ru' }
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                if (data.length === 0) {
+                    showToast('⚠️ Адрес не найден');
+                    return;
+                }
+
+                var first = data[0];
+                var lat = parseFloat(first.lat);
+                var lng = parseFloat(first.lon);
+
+                // Метка поиска
+                searchMarker = L.marker([lat, lng], {
+                    icon: L.divIcon({
+                        className: '',
+                        html: '<div style="background:#4285f4;border:3px solid #fff;border-radius:50%;width:18px;height:18px;box-shadow:0 0 15px rgba(66,133,244,0.8);"></div>',
+                        iconSize: [18, 18],
+                        iconAnchor: [9, 9]
+                    })
+                }).addTo(map);
+
+                searchMarker.bindPopup('<b>' + first.display_name + '</b>').openPopup();
+
+                map.flyTo([lat, lng], 17, { duration: 1.5 });
+                showToast('✅ Найдено: ' + first.display_name.split(',')[0]);
+            })
+            .catch(function(error) {
+                console.error(error);
+                showToast('⚠️ Ошибка поиска');
+            });
+        }
+
+        searchBtn.addEventListener('click', searchAddress);
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') searchAddress();
+        });
+
         // ===== ЗАГРУЗКА ЯМ ИЗ SUPABASE =====
         function loadFromCloud() {
-            statusText.textContent = 'Загрузка из облака...';
-            
             fetch(SUPABASE_URL + '/rest/v1/' + TABLE_NAME + '?select=*&order=created_at.desc', {
                 method: 'GET',
                 headers: {
@@ -292,13 +485,11 @@
                 return response.json();
             })
             .then(function(data) {
-                // Очищаем текущие маркеры
                 potholes.forEach(function(p) {
                     if (p.marker) map.removeLayer(p.marker);
                 });
                 potholes = [];
 
-                // Добавляем ямы из облака
                 data.forEach(function(row) {
                     var marker = createMarker(row.lat, row.lng, row.description, row.id);
                     potholes.push({
@@ -341,12 +532,10 @@
                 if (!response.ok) throw new Error('Ошибка сохранения: ' + response.status);
                 return response.json();
             })
-            .then(function(data) {
-                return data[0];
-            });
+            .then(function(data) { return data[0]; });
         }
 
-        // ===== УДАЛЕНИЕ ЯМЫ ИЗ SUPABASE =====
+        // ===== УДАЛЕНИЕ ЯМЫ =====
         function deleteFromCloud(id) {
             return fetch(SUPABASE_URL + '/rest/v1/' + TABLE_NAME + '?id=eq.' + id, {
                 method: 'DELETE',
@@ -382,10 +571,9 @@
             return marker;
         }
 
-        // ===== УДАЛЕНИЕ ЯМЫ (глобальная функция) =====
+        // ===== УДАЛЕНИЕ ЯМЫ =====
         window.deletePothole = function(id) {
             if (!confirm('Удалить эту яму?')) return;
-
             deleteFromCloud(id)
                 .then(function() {
                     var index = potholes.findIndex(function(p) { return p.id === id; });
@@ -405,7 +593,6 @@
         // ===== ДОБАВЛЕНИЕ ЯМЫ =====
         addBtn.addEventListener('click', function() {
             addingMode = !addingMode;
-
             if (addingMode) {
                 addBtn.textContent = '✕ Отмена';
                 addBtn.style.background = 'linear-gradient(135deg, #ff4757 0%, #c0392b 100%)';
@@ -424,11 +611,9 @@
 
             var lat = e.latlng.lat;
             var lng = e.latlng.lng;
-
             var description = prompt('Что здесь? (например: большая яма)', 'Яма №' + (potholes.length + 1));
             if (!description) return;
 
-            // Отправляем в облако
             saveToCloud(lat, lng, description)
                 .then(function(row) {
                     var marker = createMarker(row.lat, row.lng, row.description, row.id);
@@ -453,14 +638,13 @@
             hintEl.classList.add('hidden');
         });
 
-        // ===== ОЧИСТИТЬ МОИ (только локальные) =====
+        // ===== ОЧИСТИТЬ МОИ =====
         clearBtn.addEventListener('click', function() {
             if (potholes.length === 0) {
                 showToast('Карта уже пустая');
                 return;
             }
             if (!confirm('Скрыть все ямы с этой карты?\n(В облаке они останутся)')) return;
-
             potholes.forEach(function(p) { map.removeLayer(p.marker); });
             potholes = [];
             updateCounter();
@@ -469,7 +653,6 @@
 
         // ===== ЗАПУСК =====
         loadFromCloud();
-
         setTimeout(function() { hintEl.classList.add('hidden'); }, 5000);
     </script>
 
