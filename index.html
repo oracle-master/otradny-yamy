@@ -9,6 +9,11 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
+    <!-- Плагин кластеризации -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html, body { width: 100%; height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
@@ -101,6 +106,22 @@
         body.map-adding .leaflet-marker-icon,
         body.map-adding .leaflet-marker-shadow {
             pointer-events: none !important;
+        }
+
+        /* ===== КЛАСТЕРЫ ===== */
+        .marker-cluster-small { background-color: rgba(255, 224, 102, 0.6); }
+        .marker-cluster-small div { background-color: #ffe066; color: #1a1a2e; }
+
+        .marker-cluster-medium { background-color: rgba(255, 159, 67, 0.6); }
+        .marker-cluster-medium div { background-color: #ff9f43; color: #fff; }
+
+        .marker-cluster-large { background-color: rgba(255, 71, 87, 0.6); }
+        .marker-cluster-large div { background-color: #ff4757; color: #fff; }
+
+        .marker-cluster div {
+            font-weight: 700;
+            font-size: 14px;
+            font-family: inherit;
         }
     </style>
 </head>
@@ -211,7 +232,7 @@
         var SUPABASE_URL = 'https://xmajdholmfhuizavwhmr.supabase.co';
         var SUPABASE_KEY = 'sb_publishable_QF7Ss8n3vhlbe70iJv4tKA_2dy8ijnS';
         var TABLE_NAME = 'potholes';
-        var DUPLICATE_DISTANCE = 5; // метров — радиус слияния
+        var DUPLICATE_DISTANCE = 5;
 
         var OTRADNY_CENTER = [53.378, 51.334];
         var OTRADNY_ZOOM = 14;
@@ -224,6 +245,28 @@
             maxZoom: 19,
             attribution: '© OpenStreetMap'
         }).addTo(map);
+
+        // ===== КЛАСТЕРЫ =====
+        var clusterGroup = L.markerClusterGroup({
+            maxClusterRadius: 60,
+            spiderfyOnMaxZoom: true,
+            showCoverageOnHover: false,
+            zoomToBoundsOnClick: true,
+            disableClusteringAtZoom: 18,
+            iconCreateFunction: function(cluster) {
+                var count = cluster.getChildCount();
+                var size = 'small';
+                if (count >= 10) size = 'large';
+                else if (count >= 5) size = 'medium';
+
+                return L.divIcon({
+                    html: '<div><span>' + count + '</span></div>',
+                    className: 'marker-cluster marker-cluster-' + size,
+                    iconSize: L.point(40, 40)
+                });
+            }
+        });
+        map.addLayer(clusterGroup);
 
         var potholes = [];
         var addingMode = false;
@@ -463,9 +506,10 @@
             severity = severity || 1;
             confirmations = confirmations || 1;
             var icon = getIconForSeverity(severity);
-            var marker = L.marker([lat, lng], { icon: icon }).addTo(map);
+            var marker = L.marker([lat, lng], { icon: icon });
             marker._popupData = { description: description, id: id, severity: severity, confirmations: confirmations, lat: lat, lng: lng };
             marker.bindPopup(makePopupContent(marker._popupData));
+            clusterGroup.addLayer(marker);
             return marker;
         }
 
@@ -502,7 +546,7 @@
                 return response.json();
             })
             .then(function(data) {
-                potholes.forEach(function(p) { if (p.marker) map.removeLayer(p.marker); });
+                clusterGroup.clearLayers();
                 potholes = [];
 
                 data.forEach(function(row) {
@@ -581,7 +625,7 @@
                 .then(function() {
                     var index = potholes.findIndex(function(p) { return p.id === id; });
                     if (index !== -1) {
-                        map.removeLayer(potholes[index].marker);
+                        clusterGroup.removeLayer(potholes[index].marker);
                         potholes.splice(index, 1);
                     }
                     updateCounter();
@@ -769,7 +813,7 @@
         clearBtn.addEventListener('click', function() {
             if (potholes.length === 0) { showToast('Карта уже пустая'); return; }
             if (!confirm('Скрыть все ямы с этой карты?\n(В облаке они останутся)')) return;
-            potholes.forEach(function(p) { map.removeLayer(p.marker); });
+            clusterGroup.clearLayers();
             potholes = [];
             updateCounter();
             showToast('Скрыто с карты');
