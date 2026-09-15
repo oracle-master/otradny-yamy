@@ -170,23 +170,50 @@
             white-space: nowrap;
         }
 
-        /* Маркер ямы */
+        /* ===== МАРКЕРЫ ЯМ ===== */
         .pothole-marker {
-            background: #ff4757;
-            border: 3px solid #fff;
             border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            box-shadow: 0 0 15px rgba(255, 71, 87, 0.8);
             animation: pulse 2s infinite;
         }
 
-        @keyframes pulse {
-            0%, 100% { box-shadow: 0 0 15px rgba(255, 71, 87, 0.8); }
-            50% { box-shadow: 0 0 25px rgba(255, 71, 87, 1); }
+        /* Мелкая */
+        .pothole-minor {
+            background: #ffe066;
+            border: 3px solid #fff;
+            width: 16px;
+            height: 16px;
+            box-shadow: 0 0 12px rgba(255, 224, 102, 0.8);
         }
 
-        /* Маркер-черновик (мигает) */
+        /* Средняя */
+        .pothole-medium {
+            background: #ff9f43;
+            border: 3px solid #fff;
+            width: 22px;
+            height: 22px;
+            box-shadow: 0 0 15px rgba(255, 159, 67, 0.9);
+        }
+
+        /* Опасная */
+        .pothole-major {
+            background: #ff4757;
+            border: 3px solid #000;
+            width: 28px;
+            height: 28px;
+            box-shadow: 0 0 20px rgba(255, 71, 87, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            line-height: 1;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        /* Черновик */
         .draft-marker {
             background: #ffa502;
             border: 3px solid #fff;
@@ -226,7 +253,6 @@
             transform: translate(-50%, -50%) rotate(45deg);
         }
 
-        /* Уведомление */
         .toast {
             position: absolute;
             top: 130px;
@@ -253,7 +279,6 @@
             opacity: 1;
         }
 
-        /* Подсказка */
         .hint {
             position: absolute;
             top: 125px;
@@ -272,7 +297,6 @@
 
         .hint.hidden { opacity: 0; pointer-events: none; }
 
-        /* ===== ПАНЕЛЬ ЧЕРНОВИКА ===== */
         .draft-panel {
             position: absolute;
             bottom: 0; left: 0; right: 0;
@@ -329,7 +353,7 @@
             cursor: pointer;
         }
 
-        /* ===== ОКНО ОПИСАНИЯ ===== */
+        /* ===== МОДАЛЬНОЕ ОКНО ===== */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -348,9 +372,11 @@
             border: 1px solid rgba(160, 152, 192, 0.4);
             border-radius: 20px;
             padding: 20px;
-            max-width: 400px;
+            max-width: 420px;
             width: 100%;
             color: #fff;
+            max-height: 90vh;
+            overflow-y: auto;
         }
 
         .modal-title {
@@ -374,6 +400,85 @@
 
         .modal-input::placeholder { color: #6a6088; }
         .modal-input:focus { border-color: rgba(160, 152, 192, 0.6); }
+
+        .severity-label {
+            font-size: 13px;
+            color: #a098c0;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .severity-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .severity-option {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid transparent;
+            border-radius: 14px;
+            padding: 12px 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .severity-option:active { transform: scale(0.98); }
+
+        .severity-option.active {
+            background: rgba(106, 90, 205, 0.2);
+            border-color: #6a5acd;
+        }
+
+        .severity-circle {
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .severity-circle.minor {
+            background: #ffe066;
+            border: 3px solid #fff;
+            width: 22px;
+            height: 22px;
+        }
+
+        .severity-circle.medium {
+            background: #ff9f43;
+            border: 3px solid #fff;
+            width: 26px;
+            height: 26px;
+        }
+
+        .severity-circle.major {
+            background: #ff4757;
+            border: 3px solid #000;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .severity-text {
+            flex: 1;
+        }
+
+        .severity-name {
+            font-size: 15px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .severity-desc {
+            font-size: 11px;
+            color: #8a80a8;
+            margin-top: 2px;
+        }
 
         .modal-buttons {
             display: flex;
@@ -413,7 +518,7 @@
             <div class="header-badge" id="headerBadge">Подключение...</div>
         </div>
         <div class="search-box">
-            <input type="text" class="search-input" id="searchInput" placeholder="Ленина 15, школа №5, Озон...">
+            <input type="text" class="search-input" id="searchInput" placeholder="Ленина 15, школа №4, Озон...">
             <button class="search-btn" id="searchBtn">🔍</button>
         </div>
     </div>
@@ -422,7 +527,6 @@
 
     <div id="map"></div>
 
-    <!-- Обычная нижняя панель -->
     <div class="bottom-panel" id="bottomPanel">
         <div class="panel-row">
             <div class="stats">
@@ -437,7 +541,6 @@
         </div>
     </div>
 
-    <!-- Панель черновика -->
     <div class="draft-panel" id="draftPanel">
         <div class="draft-title">📍 Уточните местоположение</div>
         <div class="draft-subtitle">Перетащите маркер, увеличьте карту, потом сохраните</div>
@@ -447,11 +550,36 @@
         </div>
     </div>
 
-    <!-- Модальное окно описания -->
     <div class="modal-overlay" id="modalOverlay">
         <div class="modal">
             <div class="modal-title">Что здесь за яма?</div>
             <input type="text" class="modal-input" id="modalInput" placeholder="Например: большая яма" maxlength="100">
+            
+            <div class="severity-label">Уровень опасности:</div>
+            <div class="severity-options" id="severityOptions">
+                <div class="severity-option active" data-severity="1">
+                    <div class="severity-circle minor"></div>
+                    <div class="severity-text">
+                        <div class="severity-name">Мелкая</div>
+                        <div class="severity-desc">Трещина, проехать можно</div>
+                    </div>
+                </div>
+                <div class="severity-option" data-severity="2">
+                    <div class="severity-circle medium"></div>
+                    <div class="severity-text">
+                        <div class="severity-name">Средняя</div>
+                        <div class="severity-desc">Заметная яма, тряхнёт</div>
+                    </div>
+                </div>
+                <div class="severity-option" data-severity="3">
+                    <div class="severity-circle major">💥</div>
+                    <div class="severity-text">
+                        <div class="severity-name">Опасная</div>
+                        <div class="severity-desc">Глубокая, потеряешь колесо</div>
+                    </div>
+                </div>
+            </div>
+
             <div class="modal-buttons">
                 <button class="modal-btn-skip" id="modalSkip">Пропустить</button>
                 <button class="modal-btn-ok" id="modalOk">Сохранить</button>
@@ -462,17 +590,14 @@
     <div class="toast" id="toast"></div>
 
     <script>
-        // ===== НАСТРОЙКИ SUPABASE =====
         var SUPABASE_URL = 'https://xmajdholmfhuizavwhmr.supabase.co';
         var SUPABASE_KEY = 'sb_publishable_QF7Ss8n3vhlbe70iJv4tKA_2dy8ijnS';
         var TABLE_NAME = 'potholes';
 
-        // ===== КООРДИНАТЫ ОТРАДНОГО =====
         var OTRADNY_CENTER = [53.378, 51.334];
         var OTRADNY_ZOOM = 14;
         var CITY_SUFFIX = ', Отрадный, Самарская область';
 
-        // ===== ИНИЦИАЛИЗАЦИЯ КАРТЫ =====
         var map = L.map('map', { zoomControl: false }).setView(OTRADNY_CENTER, OTRADNY_ZOOM);
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
@@ -481,15 +606,14 @@
             attribution: '© OpenStreetMap'
         }).addTo(map);
 
-        // ===== СОСТОЯНИЕ =====
         var potholes = [];
         var addingMode = false;
         var draftMarker = null;
         var myLocationMarker = null;
         var myLocationCircle = null;
         var searchMarker = null;
+        var selectedSeverity = 1;
 
-        // ===== ЭЛЕМЕНТЫ =====
         var addBtn = document.getElementById('addBtn');
         var clearBtn = document.getElementById('clearBtn');
         var locateBtn = document.getElementById('locateBtn');
@@ -506,8 +630,8 @@
         var modalInput = document.getElementById('modalInput');
         var modalOk = document.getElementById('modalOk');
         var modalSkip = document.getElementById('modalSkip');
+        var severityOptions = document.getElementById('severityOptions');
 
-        // ===== ФУНКЦИИ =====
         function showToast(text) {
             toastEl.textContent = text;
             toastEl.classList.add('show');
@@ -527,6 +651,17 @@
                 headerBadge.className = 'header-badge offline';
             }
         }
+
+        // ===== ВЫБОР УРОВНЯ =====
+        severityOptions.addEventListener('click', function(e) {
+            var option = e.target.closest('.severity-option');
+            if (!option) return;
+            document.querySelectorAll('.severity-option').forEach(function(el) {
+                el.classList.remove('active');
+            });
+            option.classList.add('active');
+            selectedSeverity = parseInt(option.getAttribute('data-severity'));
+        });
 
         // ===== ГЕОЛОКАЦИЯ =====
         locateBtn.addEventListener('click', function() {
@@ -615,7 +750,54 @@
             if (e.key === 'Enter') searchAddress();
         });
 
-        // ===== ЗАГРУЗКА ЯМ =====
+        // ===== СОЗДАНИЕ ИКОНКИ ПО УРОВНЮ =====
+        function getIconForSeverity(severity) {
+            var html, size;
+            if (severity === 1) {
+                html = '<div class="pothole-marker pothole-minor"></div>';
+                size = 16;
+            } else if (severity === 2) {
+                html = '<div class="pothole-marker pothole-medium"></div>';
+                size = 22;
+            } else {
+                html = '<div class="pothole-marker pothole-major">💥</div>';
+                size = 28;
+            }
+            return L.divIcon({
+                className: '',
+                html: html,
+                iconSize: [size, size],
+                iconAnchor: [size/2, size/2]
+            });
+        }
+
+        function getSeverityName(severity) {
+            if (severity === 1) return '🟡 Мелкая';
+            if (severity === 2) return '🟠 Средняя';
+            return '🔴 Опасная';
+        }
+
+        // ===== СОЗДАНИЕ МАРКЕРА =====
+        function createMarker(lat, lng, description, id, severity) {
+            severity = severity || 1;
+            var icon = getIconForSeverity(severity);
+            var marker = L.marker([lat, lng], { icon: icon }).addTo(map);
+
+            var popupContent =
+                '<div style="min-width: 180px;">' +
+                    '<div style="font-size: 11px; color: #888; margin-bottom: 4px;">' + getSeverityName(severity) + '</div>' +
+                    '<b>' + description + '</b><br>' +
+                    '<small style="color: #888;">' + lat.toFixed(5) + ', ' + lng.toFixed(5) + '</small><br>' +
+                    '<button onclick="deletePothole(' + id + ')" ' +
+                    'style="margin-top: 8px; background: #ff4757; color: white; border: none; ' +
+                    'padding: 6px 12px; border-radius: 15px; font-size: 12px; cursor: pointer;">' +
+                    '🗑 Удалить</button>' +
+                '</div>';
+            marker.bindPopup(popupContent);
+            return marker;
+        }
+
+        // ===== ЗАГРУЗКА =====
         function loadFromCloud() {
             fetch(SUPABASE_URL + '/rest/v1/' + TABLE_NAME + '?select=*&order=created_at.desc', {
                 method: 'GET',
@@ -633,10 +815,11 @@
                 potholes = [];
 
                 data.forEach(function(row) {
-                    var marker = createMarker(row.lat, row.lng, row.description, row.id);
+                    var marker = createMarker(row.lat, row.lng, row.description, row.id, row.severity);
                     potholes.push({
                         id: row.id, lat: row.lat, lng: row.lng,
-                        description: row.description, marker: marker
+                        description: row.description, severity: row.severity,
+                        marker: marker
                     });
                 });
 
@@ -651,8 +834,8 @@
             });
         }
 
-        // ===== СОХРАНЕНИЕ ЯМЫ =====
-        function saveToCloud(lat, lng, description) {
+        // ===== СОХРАНЕНИЕ =====
+        function saveToCloud(lat, lng, description, severity) {
             return fetch(SUPABASE_URL + '/rest/v1/' + TABLE_NAME, {
                 method: 'POST',
                 headers: {
@@ -662,7 +845,7 @@
                     'Prefer': 'return=representation'
                 },
                 body: JSON.stringify({
-                    lat: lat, lng: lng, description: description
+                    lat: lat, lng: lng, description: description, severity: severity
                 })
             })
             .then(function(response) {
@@ -672,7 +855,6 @@
             .then(function(data) { return data[0]; });
         }
 
-        // ===== УДАЛЕНИЕ =====
         function deleteFromCloud(id) {
             return fetch(SUPABASE_URL + '/rest/v1/' + TABLE_NAME + '?id=eq.' + id, {
                 method: 'DELETE',
@@ -683,29 +865,6 @@
             });
         }
 
-        // ===== СОЗДАНИЕ МАРКЕРА =====
-        function createMarker(lat, lng, description, id) {
-            var icon = L.divIcon({
-                className: '',
-                html: '<div class="pothole-marker"></div>',
-                iconSize: [20, 20],
-                iconAnchor: [10, 10]
-            });
-            var marker = L.marker([lat, lng], { icon: icon }).addTo(map);
-            var popupContent =
-                '<div style="min-width: 180px;">' +
-                    '<b>' + description + '</b><br>' +
-                    '<small style="color: #888;">' + lat.toFixed(5) + ', ' + lng.toFixed(5) + '</small><br>' +
-                    '<button onclick="deletePothole(' + id + ')" ' +
-                    'style="margin-top: 8px; background: #ff4757; color: white; border: none; ' +
-                    'padding: 6px 12px; border-radius: 15px; font-size: 12px; cursor: pointer;">' +
-                    '🗑 Удалить</button>' +
-                '</div>';
-            marker.bindPopup(popupContent);
-            return marker;
-        }
-
-        // ===== УДАЛЕНИЕ ЯМЫ =====
         window.deletePothole = function(id) {
             if (!confirm('Удалить эту яму?')) return;
             deleteFromCloud(id)
@@ -724,7 +883,7 @@
                 });
         };
 
-        // ===== ДОБАВЛЕНИЕ ЯМЫ (вкл/выкл режима) =====
+        // ===== ДОБАВЛЕНИЕ =====
         addBtn.addEventListener('click', function() {
             addingMode = !addingMode;
             if (addingMode) {
@@ -739,17 +898,13 @@
             }
         });
 
-        // ===== КЛИК ПО КАРТЕ → ЧЕРНОВИК =====
         map.on('click', function(e) {
             if (!addingMode) return;
-
-            // Убираем старый черновик, если есть
             if (draftMarker) map.removeLayer(draftMarker);
 
             var lat = e.latlng.lat;
             var lng = e.latlng.lng;
 
-            // Создаём черновик (перетаскиваемый)
             var draftIcon = L.divIcon({
                 className: '',
                 html: '<div class="draft-marker"></div>',
@@ -762,17 +917,14 @@
                 draggable: true
             }).addTo(map);
 
-            // Показываем панель
             draftPanel.classList.add('show');
 
-            // Выключаем режим добавления
             addingMode = false;
             addBtn.textContent = '+ Добавить яму';
             addBtn.style.background = 'linear-gradient(135deg, #6a5acd 0%, #483d8b 100%)';
             hintEl.classList.add('hidden');
         });
 
-        // ===== ОТМЕНА ЧЕРНОВИКА =====
         draftCancel.addEventListener('click', function() {
             if (draftMarker) {
                 map.removeLayer(draftMarker);
@@ -782,56 +934,54 @@
             showToast('Отменено');
         });
 
-        // ===== СОХРАНЕНИЕ ЧЕРНОВИКА =====
         draftSave.addEventListener('click', function() {
             if (!draftMarker) return;
-
             var lat = draftMarker.getLatLng().lat;
             var lng = draftMarker.getLatLng().lng;
 
-            // Показываем окно описания
             modalInput.value = '';
+            // Сброс выбора на "Мелкая"
+            selectedSeverity = 1;
+            document.querySelectorAll('.severity-option').forEach(function(el) {
+                el.classList.remove('active');
+            });
+            document.querySelector('.severity-option[data-severity="1"]').classList.add('active');
+
             modalOverlay.classList.add('show');
             setTimeout(function() { modalInput.focus(); }, 100);
 
-            // Сохраняем координаты во временную переменную
             window._draftCoords = { lat: lat, lng: lng };
         });
 
-        // ===== МОДАЛЬНОЕ ОКНО — ОК =====
         modalOk.addEventListener('click', function() {
             var description = modalInput.value.trim() || 'Яма';
             modalOverlay.classList.remove('show');
-            finalizeDraft(window._draftCoords.lat, window._draftCoords.lng, description);
+            finalizeDraft(window._draftCoords.lat, window._draftCoords.lng, description, selectedSeverity);
         });
 
-        // ===== МОДАЛЬНОЕ ОКНО — ПРОПУСТИТЬ =====
         modalSkip.addEventListener('click', function() {
             modalOverlay.classList.remove('show');
-            finalizeDraft(window._draftCoords.lat, window._draftCoords.lng, 'Яма');
+            finalizeDraft(window._draftCoords.lat, window._draftCoords.lng, 'Яма', selectedSeverity);
         });
 
-        // Enter в модальном окне
         modalInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') modalOk.click();
         });
 
-        // ===== ФИНАЛИЗАЦИЯ ЧЕРНОВИКА =====
-        function finalizeDraft(lat, lng, description) {
-            saveToCloud(lat, lng, description)
+        function finalizeDraft(lat, lng, description, severity) {
+            saveToCloud(lat, lng, description, severity)
                 .then(function(row) {
-                    // Убираем черновик
                     if (draftMarker) {
                         map.removeLayer(draftMarker);
                         draftMarker = null;
                     }
                     draftPanel.classList.remove('show');
 
-                    // Создаём постоянный маркер
-                    var marker = createMarker(row.lat, row.lng, row.description, row.id);
+                    var marker = createMarker(row.lat, row.lng, row.description, row.id, row.severity);
                     potholes.push({
                         id: row.id, lat: row.lat, lng: row.lng,
-                        description: row.description, marker: marker
+                        description: row.description, severity: row.severity,
+                        marker: marker
                     });
                     updateCounter();
                     showToast('✅ Яма сохранена');
@@ -842,7 +992,6 @@
                 });
         }
 
-        // ===== ОЧИСТИТЬ МОИ =====
         clearBtn.addEventListener('click', function() {
             if (potholes.length === 0) { showToast('Карта уже пустая'); return; }
             if (!confirm('Скрыть все ямы с этой карты?\n(В облаке они останутся)')) return;
@@ -852,7 +1001,6 @@
             showToast('Скрыто с карты');
         });
 
-        // ===== ЗАПУСК =====
         loadFromCloud();
         setTimeout(function() { hintEl.classList.add('hidden'); }, 5000);
     </script>
