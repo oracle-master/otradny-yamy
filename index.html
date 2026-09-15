@@ -1,871 +1,330 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Карта ям Отрадного</title>
-    <meta name="theme-color" content="#1a1a2e">
-
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
-    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        html, body { width: 100%; height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-
-        .header { position: absolute; top: 0; left: 0; right: 0; z-index: 1000; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: #fff; padding: 10px 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4); display: flex; flex-direction: column; gap: 8px; }
-        .header-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-        .header-title { font-size: 16px; font-weight: 700; background: linear-gradient(135deg, #f0e8ff 0%, #a098c0 100%); -webkit-background-clip: text; background-clip: text; color: transparent; white-space: nowrap; }
-        .header-badge { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 20px; padding: 3px 10px; font-size: 11px; font-weight: 600; color: #e0d8f0; white-space: nowrap; }
-        .header-badge.online { color: #7dffa0; border-color: rgba(125, 255, 160, 0.4); }
-        .header-badge.offline { color: #ff8a8a; border-color: rgba(255, 138, 138, 0.4); }
-
-        .search-box { display: flex; gap: 6px; }
-        .search-input { flex: 1; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 20px; padding: 8px 14px; color: #fff; font-size: 14px; outline: none; }
-        .search-input::placeholder { color: #8a80a8; }
-        .search-input:focus { border-color: rgba(160, 152, 192, 0.6); }
-        .search-btn { background: linear-gradient(135deg, #6a5acd 0%, #483d8b 100%); border: none; color: #fff; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap; }
-
-        #map { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
-
-        .bottom-panel { position: absolute; bottom: 0; left: 0; right: 0; z-index: 1000; background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1e 100%); color: #fff; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4); display: flex; flex-direction: column; gap: 8px; }
-        .panel-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-        .stats { display: flex; flex-direction: column; gap: 2px; }
-        .stats-label { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #8a80a8; }
-        .stats-value { font-size: 22px; font-weight: 700; color: #f0e8ff; }
-        .add-btn { background: linear-gradient(135deg, #6a5acd 0%, #483d8b 100%); border: none; color: #fff; padding: 12px 20px; border-radius: 30px; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap; }
-        .segment-btn { background: linear-gradient(135deg, #e67e22 0%, #d35400 100%); border: none; color: #fff; padding: 12px 20px; border-radius: 30px; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap; }
-        .clear-btn { background: transparent; border: 1px solid rgba(255, 71, 87, 0.5); color: #ff6b7a; padding: 8px 14px; border-radius: 20px; font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; }
-        .locate-btn { background: transparent; border: 1px solid rgba(66, 133, 244, 0.5); color: #7aa7ff; padding: 8px 14px; border-radius: 20px; font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; }
-
-        .pothole-marker { border-radius: 50%; animation: pulse 2s infinite; }
-        .pothole-minor { background: #ffe066; border: 3px solid #fff; width: 16px; height: 16px; box-shadow: 0 0 12px rgba(255, 224, 102, 0.8); }
-        .pothole-medium { background: #ff9f43; border: 3px solid #fff; width: 22px; height: 22px; box-shadow: 0 0 15px rgba(255, 159, 67, 0.9); }
-        .pothole-major { background: #ff4757; border: 3px solid #000; width: 28px; height: 28px; box-shadow: 0 0 20px rgba(255, 71, 87, 1); display: flex; align-items: center; justify-content: center; font-size: 16px; line-height: 1; }
-        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
-
-        .draft-marker { background: #ffa502; border: 3px solid #fff; border-radius: 50%; width: 26px; height: 26px; box-shadow: 0 0 20px rgba(255, 165, 2, 1); animation: draftPulse 1s infinite; }
-        @keyframes draftPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(1.15); } }
-
-        .segment-point { background: #e67e22; border: 3px solid #fff; border-radius: 50%; width: 20px; height: 20px; box-shadow: 0 0 15px rgba(230, 126, 34, 0.9); animation: draftPulse 1s infinite; }
-
-        .my-location-marker { background: #4285f4; border: 3px solid #fff; border-radius: 50% 50% 50% 0; width: 24px; height: 24px; transform: rotate(-45deg); box-shadow: 0 0 15px rgba(66, 133, 244, 0.8); position: relative; }
-        .my-location-marker::after { content: ''; position: absolute; width: 8px; height: 8px; background: #fff; border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(45deg); }
-
-        .toast { position: absolute; top: 130px; left: 50%; transform: translateX(-50%) translateY(-100px); z-index: 2000; background: rgba(26, 26, 46, 0.95); color: #fff; padding: 12px 24px; border-radius: 30px; border: 1px solid rgba(160, 152, 192, 0.5); font-size: 14px; font-weight: 600; opacity: 0; transition: transform 0.4s ease, opacity 0.4s ease; pointer-events: none; white-space: nowrap; max-width: 90%; text-align: center; }
-        .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
-
-        .hint { position: absolute; top: 125px; left: 50%; transform: translateX(-50%); z-index: 999; background: rgba(26, 26, 46, 0.9); color: #e0d8f0; padding: 8px 16px; border-radius: 20px; font-size: 12px; border: 1px solid rgba(160, 152, 192, 0.3); transition: opacity 0.5s; white-space: nowrap; }
-        .hint.hidden { opacity: 0; pointer-events: none; }
-
-        .draft-panel { position: absolute; bottom: 0; left: 0; right: 0; z-index: 1500; background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1e 100%); color: #fff; padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); box-shadow: 0 -6px 30px rgba(0, 0, 0, 0.6); transform: translateY(100%); transition: transform 0.3s ease; }
-        .draft-panel.show { transform: translateY(0); }
-        .draft-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; color: #ffa502; }
-        .draft-subtitle { font-size: 12px; color: #8a80a8; margin-bottom: 12px; }
-        .draft-buttons { display: flex; gap: 10px; }
-        .draft-btn-save { flex: 1; background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); border: none; color: #fff; padding: 14px; border-radius: 30px; font-size: 15px; font-weight: 700; cursor: pointer; }
-        .draft-btn-cancel { flex: 1; background: transparent; border: 2px solid rgba(255, 71, 87, 0.6); color: #ff6b7a; padding: 14px; border-radius: 30px; font-size: 15px; font-weight: 700; cursor: pointer; }
-
-        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.7); z-index: 3000; display: none; align-items: center; justify-content: center; padding: 20px; }
-        .modal-overlay.show { display: flex; }
-        .modal { background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1e 100%); border: 1px solid rgba(160, 152, 192, 0.4); border-radius: 20px; padding: 20px; max-width: 420px; width: 100%; color: #fff; max-height: 90vh; overflow-y: auto; }
-        .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 12px; color: #f0e8ff; }
-        .modal-input { width: 100%; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; padding: 12px 14px; color: #fff; font-size: 15px; outline: none; margin-bottom: 14px; }
-        .modal-input::placeholder { color: #6a6088; }
-        .modal-input:focus { border-color: rgba(160, 152, 192, 0.6); }
-
-        .severity-label { font-size: 13px; color: #a098c0; margin-bottom: 8px; font-weight: 600; }
-        .severity-options { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
-        .severity-option { display: flex; align-items: center; gap: 12px; background: rgba(255, 255, 255, 0.05); border: 2px solid transparent; border-radius: 14px; padding: 12px 14px; cursor: pointer; transition: all 0.2s; }
-        .severity-option:active { transform: scale(0.98); }
-        .severity-option.active { background: rgba(106, 90, 205, 0.2); border-color: #6a5acd; }
-        .severity-circle { border-radius: 50%; flex-shrink: 0; }
-        .severity-circle.minor { background: #ffe066; border: 3px solid #fff; width: 22px; height: 22px; }
-        .severity-circle.medium { background: #ff9f43; border: 3px solid #fff; width: 26px; height: 26px; }
-        .severity-circle.major { background: #ff4757; border: 3px solid #000; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
-        .severity-text { flex: 1; }
-        .severity-name { font-size: 15px; font-weight: 700; color: #fff; }
-        .severity-desc { font-size: 11px; color: #8a80a8; margin-top: 2px; }
-        .modal-buttons { display: flex; gap: 10px; }
-        .modal-btn-ok { flex: 1; background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); border: none; color: #fff; padding: 12px; border-radius: 25px; font-size: 14px; font-weight: 700; cursor: pointer; }
-        .modal-btn-skip { flex: 1; background: transparent; border: 1px solid rgba(160, 152, 192, 0.4); color: #a098c0; padding: 12px; border-radius: 25px; font-size: 14px; font-weight: 600; cursor: pointer; }
-
-        .search-results { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; max-height: 50vh; overflow-y: auto; }
-        .search-result-item { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(160, 152, 192, 0.2); border-radius: 12px; padding: 12px 14px; cursor: pointer; transition: all 0.2s; }
-        .search-result-item:active { transform: scale(0.98); background: rgba(106, 90, 205, 0.2); }
-        .search-result-name { font-size: 14px; font-weight: 700; color: #f0e8ff; margin-bottom: 4px; }
-        .search-result-address { font-size: 11px; color: #8a80a8; line-height: 1.3; }
-        .search-result-full { font-size: 10px; color: #6a6088; margin-top: 4px; }
-
-        .nearby-info { background: rgba(255, 165, 2, 0.1); border: 1px solid rgba(255, 165, 2, 0.4); border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; font-size: 13px; color: #ffd88a; line-height: 1.4; }
-        .nearby-info b { color: #ffa502; }
-
-        body.map-adding .leaflet-marker-icon,
-        body.map-adding .leaflet-marker-shadow {
-            pointer-events: none !important;
-        }
-
-        .marker-cluster-small { background-color: rgba(255, 224, 102, 0.6); }
-        .marker-cluster-small div { background-color: #ffe066; color: #1a1a2e; }
-        .marker-cluster-medium { background-color: rgba(255, 159, 67, 0.6); }
-        .marker-cluster-medium div { background-color: #ff9f43; color: #fff; }
-        .marker-cluster-large { background-color: rgba(255, 71, 87, 0.6); }
-        .marker-cluster-large div { background-color: #ff4757; color: #fff; }
-        .marker-cluster div { font-weight: 700; font-size: 14px; font-family: inherit; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Карта ям Отрадного</title>
+<meta name="theme-color" content="#1a1a2e">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+.header{position:absolute;top:0;left:0;right:0;z-index:1000;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);color:#fff;padding:10px 12px;box-shadow:0 4px 20px rgba(0,0,0,.4);display:flex;flex-direction:column;gap:8px}
+.header-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.header-title{font-size:15px;font-weight:700;background:linear-gradient(135deg,#f0e8ff 0%,#a098c0 100%);-webkit-background-clip:text;background-clip:text;color:transparent;white-space:nowrap;flex:1}
+.header-badge{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:3px 8px;font-size:10px;font-weight:600;color:#e0d8f0;white-space:nowrap}
+.header-badge.online{color:#7dffa0;border-color:rgba(125,255,160,.4)}
+.header-badge.offline{color:#ff8a8a;border-color:rgba(255,138,138,.4)}
+.season-switch{display:flex;background:rgba(255,255,255,.08);border-radius:20px;padding:2px;gap:2px}
+.season-btn{background:transparent;border:none;color:#8a80a8;padding:4px 10px;border-radius:18px;font-size:14px;cursor:pointer;transition:all .2s;line-height:1}
+.season-btn.active{background:rgba(106,90,205,.6);color:#fff}
+.search-row{display:flex;gap:6px;align-items:center}
+.search-input{flex:1;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:8px 14px;color:#fff;font-size:13px;outline:none;min-width:0}
+.search-input::placeholder{color:#8a80a8}
+.search-input:focus{border-color:rgba(160,152,192,.6)}
+.search-btn{background:linear-gradient(135deg,#6a5acd 0%,#483d8b 100%);border:none;color:#fff;padding:8px 12px;border-radius:20px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap}
+.locate-btn-header{background:rgba(66,133,244,.15);border:1px solid rgba(66,133,244,.5);color:#7aa7ff;padding:8px 12px;border-radius:20px;font-size:14px;cursor:pointer;white-space:nowrap}
+#map{position:absolute;top:0;left:0;width:100%;height:100%;z-index:1}
+.bottom-panel{position:absolute;bottom:0;left:0;right:0;z-index:1000;background:linear-gradient(180deg,#1a1a2e 0%,#0f0f1e 100%);color:#fff;padding:10px 16px calc(10px + env(safe-area-inset-bottom));box-shadow:0 -4px 20px rgba(0,0,0,.4);display:flex;flex-direction:column;gap:8px}
+.counter-row{display:flex;justify-content:center;gap:12px;font-size:12px;color:#c0b8d8}
+.counter-item{display:flex;align-items:center;gap:4px}
+.counter-item b{color:#f0e8ff;font-size:14px}
+.buttons-row{display:flex;gap:8px}
+.buttons-row button{flex:1;padding:12px 8px;border:none;border-radius:30px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:4px}
+.add-btn{background:linear-gradient(135deg,#6a5acd 0%,#483d8b 100%);color:#fff}
+.segment-btn{background:linear-gradient(135deg,#e67e22 0%,#d35400 100%);color:#fff}
+.snow-btn{background:linear-gradient(135deg,#a8d8ff 0%,#4a90e2 100%);color:#fff}
+.ice-btn{background:linear-gradient(135deg,#4fc3f7 0%,#0277bd 100%);color:#fff}
+.slush-btn{background:linear-gradient(135deg,#bcaaa4 0%,#5d4037 100%);color:#fff}
+.pothole-marker{border-radius:50%;animation:pulse 2s infinite}
+.pothole-minor{background:#ffe066;border:3px solid #fff;width:16px;height:16px;box-shadow:0 0 12px rgba(255,224,102,.8)}
+.pothole-medium{background:#ff9f43;border:3px solid #fff;width:22px;height:22px;box-shadow:0 0 15px rgba(255,159,67,.9)}
+.pothole-major{background:#ff4757;border:3px solid #000;width:28px;height:28px;box-shadow:0 0 20px rgba(255,71,87,1);display:flex;align-items:center;justify-content:center;font-size:16px;line-height:1}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+.winter-marker{border-radius:50%;width:30px;height:30px;border:3px solid;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 0 15px rgba(255,255,255,.4);animation:pulse 2s infinite}
+.draft-marker{background:#ffa502;border:3px solid #fff;border-radius:50%;width:26px;height:26px;box-shadow:0 0 20px rgba(255,165,2,1);animation:draftPulse 1s infinite}
+@keyframes draftPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(1.15)}}
+.segment-point{background:#e67e22;border:3px solid #fff;border-radius:50%;width:20px;height:20px;box-shadow:0 0 15px rgba(230,126,34,.9);animation:draftPulse 1s infinite}
+.my-location-marker{background:#4285f4;border:3px solid #fff;border-radius:50% 50% 50% 0;width:24px;height:24px;transform:rotate(-45deg);box-shadow:0 0 15px rgba(66,133,244,.8);position:relative}
+.my-location-marker::after{content:'';position:absolute;width:8px;height:8px;background:#fff;border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%) rotate(45deg)}
+.toast{position:absolute;top:160px;left:50%;transform:translateX(-50%) translateY(-100px);z-index:2000;background:rgba(26,26,46,.95);color:#fff;padding:12px 24px;border-radius:30px;border:1px solid rgba(160,152,192,.5);font-size:13px;font-weight:600;opacity:0;transition:transform .4s ease,opacity .4s ease;pointer-events:none;white-space:nowrap;max-width:90%;text-align:center}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+.hint{position:absolute;top:150px;left:50%;transform:translateX(-50%);z-index:999;background:rgba(26,26,46,.9);color:#e0d8f0;padding:8px 16px;border-radius:20px;font-size:12px;border:1px solid rgba(160,152,192,.3);transition:opacity .5s;white-space:nowrap}
+.hint.hidden{opacity:0;pointer-events:none}
+.draft-panel{position:absolute;bottom:0;left:0;right:0;z-index:1500;background:linear-gradient(180deg,#1a1a2e 0%,#0f0f1e 100%);color:#fff;padding:16px 16px calc(16px + env(safe-area-inset-bottom));box-shadow:0 -6px 30px rgba(0,0,0,.6);transform:translateY(100%);transition:transform .3s ease}
+.draft-panel.show{transform:translateY(0)}
+.draft-title{font-size:15px;font-weight:700;margin-bottom:4px;color:#ffa502}
+.draft-subtitle{font-size:12px;color:#8a80a8;margin-bottom:12px}
+.draft-buttons{display:flex;gap:10px}
+.draft-btn-save{flex:1;background:linear-gradient(135deg,#2ecc71 0%,#27ae60 100%);border:none;color:#fff;padding:14px;border-radius:30px;font-size:15px;font-weight:700;cursor:pointer}
+.draft-btn-cancel{flex:1;background:transparent;border:2px solid rgba(255,71,87,.6);color:#ff6b7a;padding:14px;border-radius:30px;font-size:15px;font-weight:700;cursor:pointer}
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:3000;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.show{display:flex}
+.modal{background:linear-gradient(180deg,#1a1a2e 0%,#0f0f1e 100%);border:1px solid rgba(160,152,192,.4);border-radius:20px;padding:20px;max-width:420px;width:100%;color:#fff;max-height:90vh;overflow-y:auto}
+.modal-title{font-size:17px;font-weight:700;margin-bottom:12px;color:#f0e8ff}
+.modal-input{width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:12px 14px;color:#fff;font-size:15px;outline:none;margin-bottom:14px}
+.modal-input::placeholder{color:#6a6088}
+.modal-input:focus{border-color:rgba(160,152,192,.6)}
+.severity-label{font-size:13px;color:#a098c0;margin-bottom:8px;font-weight:600}
+.severity-options{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.severity-option{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.05);border:2px solid transparent;border-radius:14px;padding:12px 14px;cursor:pointer;transition:all .2s}
+.severity-option:active{transform:scale(.98)}
+.severity-option.active{background:rgba(106,90,205,.2);border-color:#6a5acd}
+.severity-circle{border-radius:50%;flex-shrink:0}
+.severity-circle.minor{background:#ffe066;border:3px solid #fff;width:22px;height:22px}
+.severity-circle.medium{background:#ff9f43;border:3px solid #fff;width:26px;height:26px}
+.severity-circle.major{background:#ff4757;border:3px solid #000;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.severity-text{flex:1}
+.severity-name{font-size:15px;font-weight:700;color:#fff}
+.severity-desc{font-size:11px;color:#8a80a8;margin-top:2px}
+.modal-buttons{display:flex;gap:10px}
+.modal-btn-ok{flex:1;background:linear-gradient(135deg,#2ecc71 0%,#27ae60 100%);border:none;color:#fff;padding:12px;border-radius:25px;font-size:14px;font-weight:700;cursor:pointer}
+.modal-btn-skip{flex:1;background:transparent;border:1px solid rgba(160,152,192,.4);color:#a098c0;padding:12px;border-radius:25px;font-size:14px;font-weight:600;cursor:pointer}
+.search-results{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;max-height:50vh;overflow-y:auto}
+.search-result-item{background:rgba(255,255,255,.05);border:1px solid rgba(160,152,192,.2);border-radius:12px;padding:12px 14px;cursor:pointer;transition:all .2s}
+.search-result-item:active{transform:scale(.98);background:rgba(106,90,205,.2)}
+.search-result-name{font-size:14px;font-weight:700;color:#f0e8ff;margin-bottom:4px}
+.search-result-address{font-size:11px;color:#8a80a8;line-height:1.3}
+.search-result-full{font-size:10px;color:#6a6088;margin-top:4px}
+.nearby-info{background:rgba(255,165,2,.1);border:1px solid rgba(255,165,2,.4);border-radius:12px;padding:12px 14px;margin-bottom:14px;font-size:13px;color:#ffd88a;line-height:1.4}
+.nearby-info b{color:#ffa502}
+body.map-adding .leaflet-marker-icon,body.map-adding .leaflet-marker-shadow{pointer-events:none!important}
+.marker-cluster-small{background-color:rgba(255,224,102,.6)}
+.marker-cluster-small div{background-color:#ffe066;color:#1a1a2e}
+.marker-cluster-medium{background-color:rgba(255,159,67,.6)}
+.marker-cluster-medium div{background-color:#ff9f43;color:#fff}
+.marker-cluster-large{background-color:rgba(255,71,87,.6)}
+.marker-cluster-large div{background-color:#ff4757;color:#fff}
+.marker-cluster div{font-weight:700;font-size:14px;font-family:inherit}
+</style>
 </head>
 <body>
-
-    <div class="header">
-        <div class="header-top">
-            <div class="header-title">🗺️ Карта ям Отрадного</div>
-            <div class="header-badge" id="headerBadge">Подключение...</div>
-        </div>
-        <div class="search-box">
-            <input type="text" class="search-input" id="searchInput" placeholder="Ленина 15, школа №4, Озон...">
-            <button class="search-btn" id="searchBtn">🔍</button>
-        </div>
-    </div>
-
-    <div class="hint" id="hint">Нажми «+ Добавить яму» и ткни в карту</div>
-
-    <div id="map"></div>
-
-    <div class="bottom-panel" id="bottomPanel">
-        <div class="panel-row">
-            <div class="stats">
-                <div class="stats-label">Ям / участков</div>
-                <div class="stats-value"><span id="potholeCount">0</span> / <span id="segmentCount">0</span></div>
-            </div>
-            <button class="add-btn" id="addBtn">+ Яма</button>
-        </div>
-        <div class="panel-row">
-            <button class="segment-btn" id="segmentBtn">🛣 Участок</button>
-            <button class="locate-btn" id="locateBtn">📍 Я здесь</button>
-        </div>
-    </div>
-
-    <div class="draft-panel" id="draftPanel">
-        <div class="draft-title" id="draftTitle">📍 Уточните местоположение</div>
-        <div class="draft-subtitle" id="draftSubtitle">Перетащите маркер, увеличьте карту, потом сохраните</div>
-        <div class="draft-buttons">
-            <button class="draft-btn-cancel" id="draftCancel">✕ Отмена</button>
-            <button class="draft-btn-save" id="draftSave">✅ Сохранить</button>
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="modalOverlay">
-        <div class="modal">
-            <div class="modal-title">Что здесь за яма?</div>
-            <input type="text" class="modal-input" id="modalInput" placeholder="Например: большая яма" maxlength="100">
-            <div class="severity-label">Уровень опасности:</div>
-            <div class="severity-options" id="severityOptions">
-                <div class="severity-option active" data-severity="1">
-                    <div class="severity-circle minor"></div>
-                    <div class="severity-text">
-                        <div class="severity-name">Мелкая</div>
-                        <div class="severity-desc">Трещина, проехать можно</div>
-                    </div>
-                </div>
-                <div class="severity-option" data-severity="2">
-                    <div class="severity-circle medium"></div>
-                    <div class="severity-text">
-                        <div class="severity-name">Средняя</div>
-                        <div class="severity-desc">Заметная яма, тряхнёт</div>
-                    </div>
-                </div>
-                <div class="severity-option" data-severity="3">
-                    <div class="severity-circle major">💥</div>
-                    <div class="severity-text">
-                        <div class="severity-name">Опасная</div>
-                        <div class="severity-desc">Глубокая, потеряешь колесо</div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-buttons">
-                <button class="modal-btn-skip" id="modalSkip">Пропустить</button>
-                <button class="modal-btn-ok" id="modalOk">Сохранить</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="segmentModalOverlay">
-        <div class="modal">
-            <div class="modal-title">Опишите участок</div>
-            <input type="text" class="modal-input" id="segmentInput" placeholder="Например: убитая дорога у дома 15" maxlength="100">
-            <div class="severity-label">Уровень опасности:</div>
-            <div class="severity-options" id="segmentSeverityOptions">
-                <div class="severity-option active" data-severity="1">
-                    <div class="severity-circle minor"></div>
-                    <div class="severity-text">
-                        <div class="severity-name">Мелкие</div>
-                        <div class="severity-desc">Трещины, ехать можно</div>
-                    </div>
-                </div>
-                <div class="severity-option" data-severity="2">
-                    <div class="severity-circle medium"></div>
-                    <div class="severity-text">
-                        <div class="severity-name">Средние</div>
-                        <div class="severity-desc">Заметные ямы</div>
-                    </div>
-                </div>
-                <div class="severity-option" data-severity="3">
-                    <div class="severity-circle major">💥</div>
-                    <div class="severity-text">
-                        <div class="severity-name">Опасные</div>
-                        <div class="severity-desc">Убито, лучше объехать</div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-buttons">
-                <button class="modal-btn-skip" id="segmentSkip">Пропустить</button>
-                <button class="modal-btn-ok" id="segmentOk">Сохранить</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="searchModalOverlay">
-        <div class="modal">
-            <div class="modal-title">🔍 Найдено несколько:</div>
-            <div class="search-results" id="searchResults"></div>
-            <div class="modal-buttons">
-                <button class="modal-btn-skip" id="searchCancel" style="flex: 1;">Отмена</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="nearbyOverlay">
-        <div class="modal">
-            <div class="modal-title">⚠️ Рядом уже есть яма</div>
-            <div class="nearby-info" id="nearbyInfo">Здесь уже отмечена яма. Что делать?</div>
-            <div class="modal-buttons" style="flex-direction: column;">
-                <button class="modal-btn-ok" id="nearbyConfirm" style="width: 100%;">✅ Подтвердить (яма та же)</button>
-                <button class="modal-btn-skip" id="nearbyNew" style="width: 100%;">➕ Создать новую</button>
-                <button class="modal-btn-skip" id="nearbyCancel" style="width: 100%;">✕ Отмена</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="toast" id="toast"></div>
-
-    <script>
-        var SUPABASE_URL = 'https://xmajdholmfhuizavwhmr.supabase.co';
-        var SUPABASE_KEY = 'sb_publishable_QF7Ss8n3vhlbe70iJv4tKA_2dy8ijnS';
-        var TABLE_POTHOLES = 'potholes';
-        var TABLE_SEGMENTS = 'road_segments';
-        var DUPLICATE_DISTANCE = 5;
-
-        var OTRADNY_CENTER = [53.378, 51.334];
-        var OTRADNY_ZOOM = 14;
-        var CITY_SUFFIX = ', Отрадный, Самарская область';
-
-        var map = L.map('map', { zoomControl: false }).setView(OTRADNY_CENTER, OTRADNY_ZOOM);
-        L.control.zoom({ position: 'bottomright' }).addTo(map);
-
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap'
-        }).addTo(map);
-
-        var clusterGroup = L.markerClusterGroup({
-            maxClusterRadius: 60,
-            spiderfyOnMaxZoom: true,
-            showCoverageOnHover: false,
-            zoomToBoundsOnClick: true,
-            disableClusteringAtZoom: 18,
-            iconCreateFunction: function(cluster) {
-                var count = cluster.getChildCount();
-                var size = 'small';
-                if (count >= 10) size = 'large';
-                else if (count >= 5) size = 'medium';
-                return L.divIcon({
-                    html: '<div><span>' + count + '</span></div>',
-                    className: 'marker-cluster marker-cluster-' + size,
-                    iconSize: L.point(40, 40)
-                });
-            }
-        });
-        map.addLayer(clusterGroup);
-
-        var potholes = [];
-        var segments = [];
-        var addingMode = false;
-        var segmentMode = false;
-        var draftMarker = null;
-        var segmentStart = null;
-        var segmentEnd = null;
-        var segmentLine = null;
-        var segmentPoints = [];
-        var myLocationMarker = null;
-        var myLocationCircle = null;
-        var searchMarker = null;
-        var selectedSeverity = 1;
-        var segmentSeverity = 1;
-        var nearbyPotholeId = null;
-
-        var addBtn = document.getElementById('addBtn');
-        var segmentBtn = document.getElementById('segmentBtn');
-        var clearBtn = document.getElementById('clearBtn');
-        var locateBtn = document.getElementById('locateBtn');
-        var potholeCountEl = document.getElementById('potholeCount');
-        var segmentCountEl = document.getElementById('segmentCount');
-        var toastEl = document.getElementById('toast');
-        var hintEl = document.getElementById('hint');
-        var headerBadge = document.getElementById('headerBadge');
-        var searchInput = document.getElementById('searchInput');
-        var searchBtn = document.getElementById('searchBtn');
-        var draftPanel = document.getElementById('draftPanel');
-        var draftTitle = document.getElementById('draftTitle');
-        var draftSubtitle = document.getElementById('draftSubtitle');
-        var draftSave = document.getElementById('draftSave');
-        var draftCancel = document.getElementById('draftCancel');
-        var modalOverlay = document.getElementById('modalOverlay');
-        var modalInput = document.getElementById('modalInput');
-        var modalOk = document.getElementById('modalOk');
-        var modalSkip = document.getElementById('modalSkip');
-        var severityOptions = document.getElementById('severityOptions');
-        var segmentModalOverlay = document.getElementById('segmentModalOverlay');
-        var segmentInput = document.getElementById('segmentInput');
-        var segmentOk = document.getElementById('segmentOk');
-        var segmentSkip = document.getElementById('segmentSkip');
-        var segmentSeverityOptions = document.getElementById('segmentSeverityOptions');
-        var searchModalOverlay = document.getElementById('searchModalOverlay');
-        var searchResults = document.getElementById('searchResults');
-        var searchCancel = document.getElementById('searchCancel');
-        var nearbyOverlay = document.getElementById('nearbyOverlay');
-        var nearbyInfo = document.getElementById('nearbyInfo');
-        var nearbyConfirm = document.getElementById('nearbyConfirm');
-        var nearbyNew = document.getElementById('nearbyNew');
-        var nearbyCancel = document.getElementById('nearbyCancel');
-
-        function showToast(text) {
-            toastEl.textContent = text;
-            toastEl.classList.add('show');
-            setTimeout(function() { toastEl.classList.remove('show'); }, 2500);
-        }
-
-        function updateCounter() {
-            potholeCountEl.textContent = potholes.length;
-            segmentCountEl.textContent = segments.length;
-        }
-
-        function setOnline(isOnline) {
-            if (isOnline) {
-                headerBadge.textContent = 'В сети';
-                headerBadge.className = 'header-badge online';
-            } else {
-                headerBadge.textContent = 'Оффлайн';
-                headerBadge.className = 'header-badge offline';
-            }
-        }
-
-        function distanceMeters(lat1, lng1, lat2, lng2) {
-            var R = 6371000;
-            var dLat = (lat2 - lat1) * Math.PI / 180;
-            var dLng = (lng2 - lng1) * Math.PI / 180;
-            var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                    Math.sin(dLng/2) * Math.sin(dLng/2);
-            var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            return R * c;
-        }
-
-        function findNearbyPothole(lat, lng) {
-            for (var i = 0; i < potholes.length; i++) {
-                var d = distanceMeters(lat, lng, potholes[i].lat, potholes[i].lng);
-                if (d <= DUPLICATE_DISTANCE) return potholes[i];
-            }
-            return null;
-        }
-
-        severityOptions.addEventListener('click', function(e) {
-            var option = e.target.closest('.severity-option');
-            if (!option) return;
-            severityOptions.querySelectorAll('.severity-option').forEach(function(el) { el.classList.remove('active'); });
-            option.classList.add('active');
-            selectedSeverity = parseInt(option.getAttribute('data-severity'));
-        });
-
-        segmentSeverityOptions.addEventListener('click', function(e) {
-            var option = e.target.closest('.severity-option');
-            if (!option) return;
-            segmentSeverityOptions.querySelectorAll('.severity-option').forEach(function(el) { el.classList.remove('active'); });
-            option.classList.add('active');
-            segmentSeverity = parseInt(option.getAttribute('data-severity'));
-        });
-
-        locateBtn.addEventListener('click', function() {
-            if (!navigator.geolocation) { showToast('⚠️ Геолокация не поддерживается'); return; }
-            showToast('📍 Определяю...');
-            navigator.geolocation.getCurrentPosition(
-                function(position) {
-                    var lat = position.coords.latitude;
-                    var lng = position.coords.longitude;
-                    var accuracy = position.coords.accuracy;
-                    if (myLocationMarker) map.removeLayer(myLocationMarker);
-                    if (myLocationCircle) map.removeLayer(myLocationCircle);
-                    var myIcon = L.divIcon({ className: '', html: '<div class="my-location-marker"></div>', iconSize: [24, 24], iconAnchor: [12, 24] });
-                    myLocationMarker = L.marker([lat, lng], { icon: myIcon }).addTo(map);
-                    myLocationCircle = L.circle([lat, lng], { radius: accuracy, color: '#4285f4', fillColor: '#4285f4', fillOpacity: 0.15, weight: 1 }).addTo(map);
-                    map.flyTo([lat, lng], 17, { duration: 1.5 });
-                    showToast('📍 Найдено! Точность: ±' + Math.round(accuracy) + ' м');
-                },
-                function(error) {
-                    var msg = '⚠️ Ошибка геолокации';
-                    if (error.code === 1) msg = '⚠️ Разрешите доступ к геолокации';
-                    if (error.code === 2) msg = '⚠️ Включите GPS на телефоне';
-                    if (error.code === 3) msg = '⚠️ Превышено время';
-                    showToast(msg);
-                },
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-            );
-        });
-
-        function searchAddress() {
-            var query = searchInput.value.trim();
-            if (!query) { showToast('⚠️ Введите адрес'); return; }
-            if (searchMarker) map.removeLayer(searchMarker);
-            showToast('🔍 Ищу...');
-            var url = 'https://nominatim.openstreetmap.org/search?format=json&limit=10&addressdetails=1&q=' + encodeURIComponent(query + CITY_SUFFIX);
-            fetch(url, { headers: { 'Accept-Language': 'ru' } })
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-                if (data.length === 0) { showToast('⚠️ Ничего не найдено'); return; }
-                if (data.length === 1) { goToResult(data[0]); return; }
-                showSearchResults(data);
-            })
-            .catch(function(e) { console.error(e); showToast('⚠️ Ошибка поиска'); });
-        }
-
-        function showSearchResults(results) {
-            searchResults.innerHTML = '';
-            results.forEach(function(item) {
-                var parts = item.display_name.split(',');
-                var name = parts[0] || item.display_name;
-                var address = parts.slice(1, 3).join(',').trim();
-                var div = document.createElement('div');
-                div.className = 'search-result-item';
-                div.innerHTML = '<div class="search-result-name">📍 ' + name + '</div>' +
-                                '<div class="search-result-address">' + address + '</div>' +
-                                '<div class="search-result-full">' + item.display_name + '</div>';
-                div.addEventListener('click', function() { searchModalOverlay.classList.remove('show'); goToResult(item); });
-                searchResults.appendChild(div);
-            });
-            searchModalOverlay.classList.add('show');
-        }
-
-        function goToResult(item) {
-            var lat = parseFloat(item.lat);
-            var lng = parseFloat(item.lon);
-            searchMarker = L.marker([lat, lng], {
-                icon: L.divIcon({ className: '', html: '<div style="background:#4285f4;border:3px solid #fff;border-radius:50%;width:18px;height:18px;box-shadow:0 0 15px rgba(66,133,244,0.8);"></div>', iconSize: [18, 18], iconAnchor: [9, 9] })
-            }).addTo(map);
-            searchMarker.bindPopup('<b>' + item.display_name + '</b>').openPopup();
-            map.flyTo([lat, lng], 17, { duration: 1.5 });
-            showToast('✅ ' + item.display_name.split(',')[0]);
-        }
-
-        searchBtn.addEventListener('click', searchAddress);
-        searchInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') searchAddress(); });
-        searchCancel.addEventListener('click', function() { searchModalOverlay.classList.remove('show'); });
-
-        function getIconForSeverity(severity) {
-            var html, size;
-            if (severity === 1) { html = '<div class="pothole-marker pothole-minor"></div>'; size = 16; }
-            else if (severity === 2) { html = '<div class="pothole-marker pothole-medium"></div>'; size = 22; }
-            else { html = '<div class="pothole-marker pothole-major">💥</div>'; size = 28; }
-            return L.divIcon({ className: '', html: html, iconSize: [size, size], iconAnchor: [size/2, size/2] });
-        }
-
-        function getSeverityName(severity) {
-            if (severity === 1) return '🟡 Мелкая';
-            if (severity === 2) return '🟠 Средняя';
-            return '🔴 Опасная';
-        }
-
-        function getSegmentColor(severity) {
-            if (severity === 1) return '#ffe066';
-            if (severity === 2) return '#ff9f43';
-            return '#ff4757';
-        }
-
-        function createMarker(lat, lng, description, id, severity, confirmations) {
-            severity = severity || 1;
-            confirmations = confirmations || 1;
-            var marker = L.marker([lat, lng], { icon: getIconForSeverity(severity) });
-            marker._popupData = { description: description, id: id, severity: severity, confirmations: confirmations, lat: lat, lng: lng };
-            marker.bindPopup(makePopupContent(marker._popupData));
-            clusterGroup.addLayer(marker);
-            return marker;
-        }
-
-        function makePopupContent(data) {
-            var confText = data.confirmations > 1 ? '<div style="font-size: 11px; color: #ffa502; margin-top: 4px;">👥 Подтверждено: ' + data.confirmations + ' раз</div>' : '';
-            return '<div style="min-width: 180px;">' +
-                    '<div style="font-size: 11px; color: #888; margin-bottom: 4px;">' + getSeverityName(data.severity) + '</div>' +
-                    '<b>' + data.description + '</b>' + confText +
-                    '<br><small style="color: #888;">' + data.lat.toFixed(5) + ', ' + data.lng.toFixed(5) + '</small><br>' +
-                    '<button onclick="deletePothole(' + data.id + ')" style="margin-top: 8px; background: #ff4757; color: white; border: none; padding: 6px 12px; border-radius: 15px; font-size: 12px; cursor: pointer;">🗑 Удалить</button>' +
-                '</div>';
-        }
-
-        function refreshPopup(pothole) {
-            var data = pothole.marker._popupData;
-            data.confirmations = pothole.confirmations;
-            pothole.marker.setPopupContent(makePopupContent(data));
-        }
-
-        function createSegmentLine(coords, id, severity, description) {
-            var latlngs = coords.map(function(c) { return [c[0], c[1]]; });
-            var color = getSegmentColor(severity);
-            var line = L.polyline(latlngs, { color: color, weight: 6, opacity: 0.8, lineCap: 'round' });
-            line.addTo(map);
-            line._segmentData = { id: id, severity: severity, description: description, coords: coords };
-            line.bindPopup(makeSegmentPopup(line._segmentData));
-            return line;
-        }
-
-        function makeSegmentPopup(data) {
-            var lengthM = 0;
-            for (var i = 1; i < data.coords.length; i++) {
-                lengthM += distanceMeters(data.coords[i-1][0], data.coords[i-1][1], data.coords[i][0], data.coords[i][1]);
-            }
-            var lengthText = Math.round(lengthM) + ' м';
-            return '<div style="min-width: 180px;">' +
-                    '<div style="font-size: 11px; color: #e67e22; margin-bottom: 4px;">🛣 УЧАСТОК · ' + getSeverityName(data.severity) + '</div>' +
-                    '<b>' + (data.description || 'Убитый участок') + '</b><br>' +
-                    '<small style="color: #888;">Длина: ' + lengthText + '</small><br>' +
-                    '<button onclick="deleteSegment(' + data.id + ')" style="margin-top: 8px; background: #ff4757; color: white; border: none; padding: 6px 12px; border-radius: 15px; font-size: 12px; cursor: pointer;">🗑 Удалить</button>' +
-                '</div>';
-        }
-
-        function loadFromCloud() {
-            fetch(SUPABASE_URL + '/rest/v1/' + TABLE_POTHOLES + '?select=*&order=created_at.desc', {
-                headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
-            })
-            .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-            .then(function(data) {
-                clusterGroup.clearLayers();
-                potholes = [];
-                data.forEach(function(row) {
-                    var marker = createMarker(row.lat, row.lng, row.description, row.id, row.severity, row.confirmations);
-                    potholes.push({ id: row.id, lat: row.lat, lng: row.lng, description: row.description, severity: row.severity, confirmations: row.confirmations || 1, marker: marker });
-                });
-                updateCounter();
-                setOnline(true);
-                showToast('☁️ Загружено ям: ' + potholes.length);
-            })
-            .catch(function(e) { console.error(e); setOnline(false); showToast('⚠️ Не удалось загрузить ямы'); });
-
-            fetch(SUPABASE_URL + '/rest/v1/' + TABLE_SEGMENTS + '?select=*&order=created_at.desc', {
-                headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
-            })
-            .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-            .then(function(data) {
-                segments.forEach(function(s) { if (s.line) map.removeLayer(s.line); });
-                segments = [];
-                data.forEach(function(row) {
-                    var line = createSegmentLine(row.coords, row.id, row.severity, row.description);
-                    segments.push({ id: row.id, coords: row.coords, severity: row.severity, description: row.description, line: line });
-                });
-                updateCounter();
-            })
-            .catch(function(e) { console.error('Segments load error:', e); });
-        }
-
-        function saveToCloud(lat, lng, description, severity) {
-            return fetch(SUPABASE_URL + '/rest/v1/' + TABLE_POTHOLES, {
-                method: 'POST',
-                headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
-                body: JSON.stringify({ lat: lat, lng: lng, description: description, severity: severity })
-            })
-            .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-            .then(function(data) { return data[0]; });
-        }
-
-        function saveSegmentToCloud(coords, description, severity) {
-            return fetch(SUPABASE_URL + '/rest/v1/' + TABLE_SEGMENTS, {
-                method: 'POST',
-                headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
-                body: JSON.stringify({ coords: coords, description: description, severity: severity })
-            })
-            .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-            .then(function(data) { return data[0]; });
-        }
-
-        function incrementConfirmations(id, current) {
-            var newCount = (current || 1) + 1;
-            return fetch(SUPABASE_URL + '/rest/v1/' + TABLE_POTHOLES + '?id=eq.' + id, {
-                method: 'PATCH',
-                headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
-                body: JSON.stringify({ confirmations: newCount })
-            })
-            .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-            .then(function(data) { return data[0]; });
-        }
-
-        function deleteFromCloud(id) {
-            return fetch(SUPABASE_URL + '/rest/v1/' + TABLE_POTHOLES + '?id=eq.' + id, {
-                method: 'DELETE',
-                headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
-            });
-        }
-
-        function deleteSegmentFromCloud(id) {
-            return fetch(SUPABASE_URL + '/rest/v1/' + TABLE_SEGMENTS + '?id=eq.' + id, {
-                method: 'DELETE',
-                headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
-            });
-        }
-
-        window.deletePothole = function(id) {
-            if (!confirm('Удалить эту яму?')) return;
-            deleteFromCloud(id).then(function() {
-                var idx = potholes.findIndex(function(p) { return p.id === id; });
-                if (idx !== -1) { clusterGroup.removeLayer(potholes[idx].marker); potholes.splice(idx, 1); }
-                updateCounter();
-                showToast('🗑 Яма удалена');
-            }).catch(function(e) { console.error(e); showToast('⚠️ Не удалось удалить'); });
-        };
-
-        window.deleteSegment = function(id) {
-            if (!confirm('Удалить этот участок?')) return;
-            deleteSegmentFromCloud(id).then(function() {
-                var idx = segments.findIndex(function(s) { return s.id === id; });
-                if (idx !== -1) { map.removeLayer(segments[idx].line); segments.splice(idx, 1); }
-                updateCounter();
-                showToast('🗑 Участок удалён');
-            }).catch(function(e) { console.error(e); showToast('⚠️ Не удалось удалить'); });
-        };
-
-        addBtn.addEventListener('click', function() {
-            if (segmentMode) cancelSegmentMode();
-            addingMode = !addingMode;
-            if (addingMode) {
-                addBtn.textContent = '✕ Отмена';
-                addBtn.style.background = 'linear-gradient(135deg, #ff4757 0%, #c0392b 100%)';
-                hintEl.classList.remove('hidden');
-                hintEl.textContent = 'Увеличьте карту и ткните точнее';
-                document.body.classList.add('map-adding');
-                map.flyTo(map.getCenter(), 18, { duration: 0.8 });
-            } else {
-                addBtn.textContent = '+ Яма';
-                addBtn.style.background = 'linear-gradient(135deg, #6a5acd 0%, #483d8b 100%)';
-                hintEl.classList.add('hidden');
-                document.body.classList.remove('map-adding');
-            }
-        });
-
-        segmentBtn.addEventListener('click', function() {
-            if (addingMode) {
-                addingMode = false;
-                addBtn.textContent = '+ Яма';
-                addBtn.style.background = 'linear-gradient(135deg, #6a5acd 0%, #483d8b 100%)';
-                document.body.classList.remove('map-adding');
-            }
-            segmentMode = !segmentMode;
-            if (segmentMode) {
-                segmentBtn.textContent = '✕ Отмена';
-                segmentBtn.style.background = 'linear-gradient(135deg, #ff4757 0%, #c0392b 100%)';
-                hintEl.classList.remove('hidden');
-                hintEl.textContent = 'Ткните начало участка, затем конец';
-                segmentPoints = [];
-            } else {
-                cancelSegmentMode();
-            }
-        });
-
-        function cancelSegmentMode() {
-            segmentMode = false;
-            segmentBtn.textContent = '🛣 Участок';
-            segmentBtn.style.background = 'linear-gradient(135deg, #e67e22 0%, #d35400 100%)';
-            hintEl.classList.add('hidden');
-            if (segmentStart) { map.removeLayer(segmentStart); segmentStart = null; }
-            if (segmentEnd) { map.removeLayer(segmentEnd); segmentEnd = null; }
-            if (segmentLine) { map.removeLayer(segmentLine); segmentLine = null; }
-            segmentPoints = [];
-        }
-
-        map.on('click', function(e) {
-            if (addingMode) {
-                document.body.classList.remove('map-adding');
-                if (draftMarker) map.removeLayer(draftMarker);
-                var lat = e.latlng.lat;
-                var lng = e.latlng.lng;
-                var draftIcon = L.divIcon({ className: '', html: '<div class="draft-marker"></div>', iconSize: [26, 26], iconAnchor: [13, 13] });
-                draftMarker = L.marker([lat, lng], { icon: draftIcon, draggable: true }).addTo(map);
-                draftTitle.textContent = '📍 Уточните местоположение';
-                draftSubtitle.textContent = 'Перетащите маркер, увеличьте карту, потом сохраните';
-                draftPanel.classList.add('show');
-                addingMode = false;
-                addBtn.textContent = '+ Яма';
-                addBtn.style.background = 'linear-gradient(135deg, #6a5acd 0%, #483d8b 100%)';
-                hintEl.classList.add('hidden');
-                return;
-            }
-
-            if (segmentMode) {
-                var slat = e.latlng.lat;
-                var slng = e.latlng.lng;
-                var ptIcon = L.divIcon({ className: '', html: '<div class="segment-point"></div>', iconSize: [20, 20], iconAnchor: [10, 10] });
-                if (segmentPoints.length === 0) {
-                    segmentStart = L.marker([slat, slng], { icon: ptIcon }).addTo(map);
-                    segmentPoints.push([slat, slng]);
-                    hintEl.textContent = 'Теперь ткните конец участка';
-                } else {
-                    segmentEnd = L.marker([slat, slng], { icon: ptIcon }).addTo(map);
-                    segmentPoints.push([slat, slng]);
-                    if (segmentLine) map.removeLayer(segmentLine);
-                    segmentLine = L.polyline(segmentPoints, { color: '#e67e22', weight: 6, opacity: 0.8 }).addTo(map);
-                    hintEl.textContent = 'Нажмите «Сохранить» внизу';
-                    draftTitle.textContent = '🛣 Участок дороги';
-                    draftSubtitle.textContent = 'Проверьте линию, потом сохраните';
-                    draftPanel.classList.add('show');
-                    segmentMode = false;
-                    segmentBtn.textContent = '🛣 Участок';
-                    segmentBtn.style.background = 'linear-gradient(135deg, #e67e22 0%, #d35400 100%)';
-                }
-            }
-        });
-
-        draftCancel.addEventListener('click', function() {
-            if (draftMarker) { map.removeLayer(draftMarker); draftMarker = null; }
-            if (segmentStart) { map.removeLayer(segmentStart); segmentStart = null; }
-            if (segmentEnd) { map.removeLayer(segmentEnd); segmentEnd = null; }
-            if (segmentLine) { map.removeLayer(segmentLine); segmentLine = null; }
-            segmentPoints = [];
-            draftPanel.classList.remove('show');
-            document.body.classList.remove('map-adding');
-            showToast('Отменено');
-        });
-
-        draftSave.addEventListener('click', function() {
-            // Если это участок
-            if (segmentPoints.length >= 2) {
-                segmentInput.value = '';
-                segmentSeverity = 1;
-                segmentSeverityOptions.querySelectorAll('.severity-option').forEach(function(el, i) {
-                    el.classList.toggle('active', i === 0);
-                });
-                segmentModalOverlay.classList.add('show');
-                setTimeout(function() { segmentInput.focus(); }, 100);
-                return;
-            }
-
-            // Если это яма
-            if (!draftMarker) return;
-            var lat = draftMarker.getLatLng().lat;
-            var lng = draftMarker.getLatLng().lng;
-            var nearby = findNearbyPothole(lat, lng);
-            if (nearby) {
-                nearbyPotholeId = nearby.id;
-                var dist = Math.round(distanceMeters(lat, lng, nearby.lat, nearby.lng));
-                nearbyInfo.innerHTML = 'Рядом (в ' + dist + ' м) уже есть яма:<br><b>' + nearby.description + '</b> (' + getSeverityName(nearby.severity) + ')<br><br>Это та же яма или новая?';
-                nearbyOverlay.classList.add('show');
-                return;
-            }
-            openDescriptionModal(lat, lng);
-        });
-
-        nearbyConfirm.addEventListener('click', function() {
-            if (!nearbyPotholeId) return;
-            var pothole = potholes.find(function(p) { return p.id === nearbyPotholeId; });
-            if (!pothole) { nearbyOverlay.classList.remove('show'); return; }
-            incrementConfirmations(pothole.id, pothole.confirmations).then(function(row) {
-                pothole.confirmations = row.confirmations;
-                refreshPopup(pothole);
-                showToast('✅ Подтверждено! Теперь ' + row.confirmations + ' раз');
-                closeDraftAndNearby();
-            }).catch(function(e) { console.error(e); showToast('⚠️ Не удалось подтвердить'); closeDraftAndNearby(); });
-        });
-
-        nearbyNew.addEventListener('click', function() {
-            nearbyOverlay.classList.remove('show');
-            if (!draftMarker) return;
-            var lat = draftMarker.getLatLng().lat;
-            var lng = draftMarker.getLatLng().lng;
-            openDescriptionModal(lat, lng);
-        });
-
-        nearbyCancel.addEventListener('click', function() { nearbyOverlay.classList.remove('show'); });
-
-        function closeDraftAndNearby() {
-            if (draftMarker) { map.removeLayer(draftMarker); draftMarker = null; }
-            draftPanel.classList.remove('show');
-            nearbyOverlay.classList.remove('show');
-            nearbyPotholeId = null;
-            document.body.classList.remove('map-adding');
-        }
-
-        function openDescriptionModal(lat, lng) {
-            modalInput.value = '';
-            selectedSeverity = 1;
-            severityOptions.querySelectorAll('.severity-option').forEach(function(el, i) {
-                el.classList.toggle('active', i === 0);
-            });
-            modalOverlay.classList.add('show');
-            setTimeout(function() { modalInput.focus(); }, 100);
-            window._draftCoords = { lat: lat, lng: lng };
-        }
-
-        modalOk.addEventListener('click', function() {
-            var description = modalInput.value.trim() || 'Яма';
-            modalOverlay.classList.remove('show');
-            finalizeDraft(window._draftCoords.lat, window._draftCoords.lng, description, selectedSeverity);
-        });
-
-        modalSkip.addEventListener('click', function() {
-            modalOverlay.classList.remove('show');
-            finalizeDraft(window._draftCoords.lat, window._draftCoords.lng, 'Яма', selectedSeverity);
-        });
-
-        modalInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') modalOk.click(); });
-
-        function finalizeDraft(lat, lng, description, severity) {
-            saveToCloud(lat, lng, description, severity).then(function(row) {
-                if (draftMarker) { map.removeLayer(draftMarker); draftMarker = null; }
-                draftPanel.classList.remove('show');
-                document.body.classList.remove('map-adding');
-                var marker = createMarker(row.lat, row.lng, row.description, row.id, row.severity, row.confirmations);
-                potholes.push({ id: row.id, lat: row.lat, lng: row.lng, description: row.description, severity: row.severity, confirmations: row.confirmations || 1, marker: marker });
-                updateCounter();
-                showToast('✅ Яма сохранена');
-            }).catch(function(e) { console.error(e); showToast('⚠️ Не удалось сохранить'); });
-        }
-
-        // Участок — сохранение
-        segmentOk.addEventListener('click', function() {
-            var description = segmentInput.value.trim() || 'Убитый участок';
-            segmentModalOverlay.classList.remove('show');
-            saveSegment(segmentPoints, description, segmentSeverity);
-        });
-
-        segmentSkip.addEventListener('click', function() {
-            segmentModalOverlay.classList.remove('show');
-            saveSegment(segmentPoints, 'Убитый участок', segmentSeverity);
-        });
-
-        function saveSegment(coords, description, severity) {
-            saveSegmentToCloud(coords, description, severity).then(function(row) {
-                if (segmentStart) { map.removeLayer(segmentStart); segmentStart = null; }
-                if (segmentEnd) { map.removeLayer(segmentEnd); segmentEnd = null; }
-                if (segmentLine) { map.removeLayer(segmentLine); segmentLine = null; }
-                segmentPoints = [];
-                draftPanel.classList.remove('show');
-                var line = createSegmentLine(row.coords, row.id, row.severity, row.description);
-                segments.push({ id: row.id, coords: row.coords, severity: row.severity, description: row.description, line: line });
-                updateCounter();
-                showToast('✅ Участок сохранён');
-            }).catch(function(e) { console.error(e); showToast('⚠️ Не удалось сохранить участок'); });
-        }
-
-        loadFromCloud();
-        setTimeout(function() { hintEl.classList.add('hidden'); }, 5000);
-    </script>
-
+<div class="header">
+<div class="header-top">
+<div class="header-title">🗺️ Карта ям Отрадного</div>
+<div class="season-switch">
+<button class="season-btn active" id="seasonSummer" title="Лето">🌞</button>
+<button class="season-btn" id="seasonWinter" title="Зима">❄️</button>
+</div>
+<div class="header-badge" id="headerBadge">Подключение...</div>
+</div>
+<div class="search-row">
+<input type="text" class="search-input" id="searchInput" placeholder="Ленина 15, школа №4, Озон...">
+<button class="search-btn" id="searchBtn">🔍</button>
+<button class="locate-btn-header" id="locateBtn">📍</button>
+</div>
+</div>
+<div class="hint" id="hint">Нажми «+ Яма» и ткни в карту</div>
+<div id="map"></div>
+<div class="bottom-panel" id="bottomPanel">
+<div class="counter-row" id="counterSummer">
+<div class="counter-item"><span>🕳 Ямы:</span> <b id="potholeCount">0</b></div>
+<div class="counter-item"><span>🛣 Участки:</span> <b id="segmentCount">0</b></div>
+</div>
+<div class="counter-row" id="counterWinter" style="display:none;">
+<div class="counter-item"><span>❄️ Снег:</span> <b id="snowCount">0</b></div>
+<div class="counter-item"><span>🧊 Гололёд:</span> <b id="iceCount">0</b></div>
+<div class="counter-item"><span>🥣 Каша:</span> <b id="slushCount">0</b></div>
+</div>
+<div class="buttons-row" id="buttonsSummer">
+<button class="add-btn" id="addBtn">+ Яма</button>
+<button class="segment-btn" id="segmentBtn">🛣 Участок</button>
+</div>
+<div class="buttons-row" id="buttonsWinter" style="display:none;">
+<button class="snow-btn" id="snowBtn">❄️ Снег</button>
+<button class="ice-btn" id="iceBtn">🧊 Гололёд</button>
+<button class="slush-btn" id="slushBtn">🥣 Каша</button>
+</div>
+</div>
+<div class="draft-panel" id="draftPanel">
+<div class="draft-title" id="draftTitle">📍 Уточните местоположение</div>
+<div class="draft-subtitle" id="draftSubtitle">Перетащите маркер, увеличьте карту, потом сохраните</div>
+<div class="draft-buttons">
+<button class="draft-btn-cancel" id="draftCancel">✕ Отмена</button>
+<button class="draft-btn-save" id="draftSave">✅ Сохранить</button>
+</div>
+</div>
+<div class="modal-overlay" id="modalOverlay">
+<div class="modal">
+<div class="modal-title">Что здесь за яма?</div>
+<input type="text" class="modal-input" id="modalInput" placeholder="Например: большая яма" maxlength="100">
+<div class="severity-label">Уровень опасности:</div>
+<div class="severity-options" id="severityOptions">
+<div class="severity-option active" data-severity="1"><div class="severity-circle minor"></div><div class="severity-text"><div class="severity-name">Мелкая</div><div class="severity-desc">Трещина, проехать можно</div></div></div>
+<div class="severity-option" data-severity="2"><div class="severity-circle medium"></div><div class="severity-text"><div class="severity-name">Средняя</div><div class="severity-desc">Заметная яма, тряхнёт</div></div></div>
+<div class="severity-option" data-severity="3"><div class="severity-circle major">💥</div><div class="severity-text"><div class="severity-name">Опасная</div><div class="severity-desc">Глубокая, потеряешь колесо</div></div></div>
+</div>
+<div class="modal-buttons">
+<button class="modal-btn-skip" id="modalSkip">Пропустить</button>
+<button class="modal-btn-ok" id="modalOk">Сохранить</button>
+</div>
+</div>
+</div>
+<div class="modal-overlay" id="winterModalOverlay">
+<div class="modal">
+<div class="modal-title" id="winterModalTitle">❄️ Снег на дороге</div>
+<input type="text" class="modal-input" id="winterInput" placeholder="Например: не чищено со вчера" maxlength="100">
+<div class="modal-buttons">
+<button class="modal-btn-skip" id="winterSkip">Пропустить</button>
+<button class="modal-btn-ok" id="winterOk">Сохранить</button>
+</div>
+</div>
+</div>
+<div class="modal-overlay" id="segmentModalOverlay">
+<div class="modal">
+<div class="modal-title">Опишите участок</div>
+<input type="text" class="modal-input" id="segmentInput" placeholder="Например: убитая дорога у дома 15" maxlength="100">
+<div class="severity-label">Уровень опасности:</div>
+<div class="severity-options" id="segmentSeverityOptions">
+<div class="severity-option active" data-severity="1"><div class="severity-circle minor"></div><div class="severity-text"><div class="severity-name">Мелкие</div><div class="severity-desc">Трещины, ехать можно</div></div></div>
+<div class="severity-option" data-severity="2"><div class="severity-circle medium"></div><div class="severity-text"><div class="severity-name">Средние</div><div class="severity-desc">Заметные ямы</div></div></div>
+<div class="severity-option" data-severity="3"><div class="severity-circle major">💥</div><div class="severity-text"><div class="severity-name">Опасные</div><div class="severity-desc">Убито, лучше объехать</div></div></div>
+</div>
+<div class="modal-buttons">
+<button class="modal-btn-skip" id="segmentSkip">Пропустить</button>
+<button class="modal-btn-ok" id="segmentOk">Сохранить</button>
+</div>
+</div>
+</div>
+<div class="modal-overlay" id="searchModalOverlay">
+<div class="modal">
+<div class="modal-title">🔍 Найдено несколько:</div>
+<div class="search-results" id="searchResults"></div>
+<div class="modal-buttons">
+<button class="modal-btn-skip" id="searchCancel" style="flex:1;">Отмена</button>
+</div>
+</div>
+</div>
+<div class="modal-overlay" id="nearbyOverlay">
+<div class="modal">
+<div class="modal-title">⚠️ Рядом уже есть яма</div>
+<div class="nearby-info" id="nearbyInfo">Здесь уже отмечена яма. Что делать?</div>
+<div class="modal-buttons" style="flex-direction:column;">
+<button class="modal-btn-ok" id="nearbyConfirm" style="width:100%;">✅ Подтвердить (яма та же)</button>
+<button class="modal-btn-skip" id="nearbyNew" style="width:100%;">➕ Создать новую</button>
+<button class="modal-btn-skip" id="nearbyCancel" style="width:100%;">✕ Отмена</button>
+</div>
+</div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+var SUPABASE_URL='https://xmajdholmfhuizavwhmr.supabase.co';
+var SUPABASE_KEY='sb_publishable_QF7Ss8n3vhlbe70iJv4tKA_2dy8ijnS';
+var TABLE_POTHOLES='potholes';
+var TABLE_SEGMENTS='road_segments';
+var TABLE_WINTER='winter_reports';
+var DUPLICATE_DISTANCE=5;
+var OTRADNY_CENTER=[53.378,51.334];
+var OTRADNY_ZOOM=14;
+var CITY_SUFFIX=', Отрадный, Самарская область';
+var map=L.map('map',{zoomControl:false}).setView(OTRADNY_CENTER,OTRADNY_ZOOM);
+L.control.zoom({position:'bottomright'}).addTo(map);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+var clusterGroup=L.markerClusterGroup({maxClusterRadius:60,spiderfyOnMaxZoom:true,showCoverageOnHover:false,zoomToBoundsOnClick:true,disableClusteringAtZoom:18,iconCreateFunction:function(c){var n=c.getChildCount();var s='small';if(n>=10)s='large';else if(n>=5)s='medium';return L.divIcon({html:'<div><span>'+n+'</span></div>',className:'marker-cluster marker-cluster-'+s,iconSize:L.point(40,40)})}});
+map.addLayer(clusterGroup);
+var winterGroup=L.layerGroup();
+var currentSeason='summer';
+var potholes=[],segments=[],winterReports=[];
+var addingMode=false,segmentMode=false,winterAddType=null;
+var draftMarker=null,segmentStart=null,segmentEnd=null,segmentLine=null,segmentPoints=[];
+var myLocationMarker=null,myLocationCircle=null,searchMarker=null;
+var selectedSeverity=1,segmentSeverity=1;
+var nearbyPotholeId=null;
+var winterDraftCoords=null;
+function $(id){return document.getElementById(id)}
+var addBtn=$('addBtn'),segmentBtn=$('segmentBtn'),locateBtn=$('locateBtn');
+var snowBtn=$('snowBtn'),iceBtn=$('iceBtn'),slushBtn=$('slushBtn');
+var potholeCountEl=$('potholeCount'),segmentCountEl=$('segmentCount');
+var snowCountEl=$('snowCount'),iceCountEl=$('iceCount'),slushCountEl=$('slushCount');
+var toastEl=$('toast'),hintEl=$('hint'),headerBadge=$('headerBadge');
+var searchInput=$('searchInput'),searchBtn=$('searchBtn');
+var draftPanel=$('draftPanel'),draftTitle=$('draftTitle'),draftSubtitle=$('draftSubtitle'),draftSave=$('draftSave'),draftCancel=$('draftCancel');
+var modalOverlay=$('modalOverlay'),modalInput=$('modalInput'),modalOk=$('modalOk'),modalSkip=$('modalSkip'),severityOptions=$('severityOptions');
+var winterModalOverlay=$('winterModalOverlay'),winterInput=$('winterInput'),winterOk=$('winterOk'),winterSkip=$('winterSkip'),winterModalTitle=$('winterModalTitle');
+var segmentModalOverlay=$('segmentModalOverlay'),segmentInput=$('segmentInput'),segmentOk=$('segmentOk'),segmentSkip=$('segmentSkip'),segmentSeverityOptions=$('segmentSeverityOptions');
+var searchModalOverlay=$('searchModalOverlay'),searchResults=$('searchResults'),searchCancel=$('searchCancel');
+var nearbyOverlay=$('nearbyOverlay'),nearbyInfo=$('nearbyInfo'),nearbyConfirm=$('nearbyConfirm'),nearbyNew=$('nearbyNew'),nearbyCancel=$('nearbyCancel');
+var seasonSummer=$('seasonSummer'),seasonWinter=$('seasonWinter');
+var counterSummer=$('counterSummer'),counterWinter=$('counterWinter');
+var buttonsSummer=$('buttonsSummer'),buttonsWinter=$('buttonsWinter');
+function showToast(t){toastEl.textContent=t;toastEl.classList.add('show');setTimeout(function(){toastEl.classList.remove('show')},2500)}
+function updateCounter(){potholeCountEl.textContent=potholes.length;segmentCountEl.textContent=segments.length;snowCountEl.textContent=winterReports.filter(function(w){return w.type==='snow'}).length;iceCountEl.textContent=winterReports.filter(function(w){return w.type==='ice'}).length;slushCountEl.textContent=winterReports.filter(function(w){return w.type==='slush'}).length}
+function setOnline(on){headerBadge.textContent=on?'В сети':'Оффлайн';headerBadge.className='header-badge '+(on?'online':'offline')}
+function distanceMeters(la1,ln1,la2,ln2){var R=6371000,dLa=(la2-la1)*Math.PI/180,dLn=(ln2-ln1)*Math.PI/180;var a=Math.sin(dLa/2)*Math.sin(dLa/2)+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dLn/2)*Math.sin(dLn/2);return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))}
+function findNearbyPothole(lat,lng){for(var i=0;i<potholes.length;i++){if(distanceMeters(lat,lng,potholes[i].lat,potholes[i].lng)<=DUPLICATE_DISTANCE)return potholes[i]}return null}
+function setSeason(season){currentSeason=season;if(season==='summer'){seasonSummer.classList.add('active');seasonWinter.classList.remove('active');counterSummer.style.display='flex';counterWinter.style.display='none';buttonsSummer.style.display='flex';buttonsWinter.style.display='none';map.addLayer(clusterGroup);segments.forEach(function(s){if(s.line)map.addLayer(s.line)});map.removeLayer(winterGroup);hintEl.textContent='Нажми «+ Яма» и ткни в карту';showToast('🌞 Летний режим')}else{seasonWinter.classList.add('active');seasonSummer.classList.remove('active');counterSummer.style.display='none';counterWinter.style.display='flex';buttonsSummer.style.display='none';buttonsWinter.style.display='flex';map.removeLayer(clusterGroup);segments.forEach(function(s){if(s.line)map.removeLayer(s.line)});map.addLayer(winterGroup);hintEl.textContent='Выбери тип и ткни в карту';showToast('❄️ Зимний режим')}}
+seasonSummer.addEventListener('click',function(){setSeason('summer')});
+seasonWinter.addEventListener('click',function(){setSeason('winter')});
+severityOptions.addEventListener('click',function(e){var o=e.target.closest('.severity-option');if(!o)return;severityOptions.querySelectorAll('.severity-option').forEach(function(el){el.classList.remove('active')});o.classList.add('active');selectedSeverity=parseInt(o.getAttribute('data-severity'))});
+segmentSeverityOptions.addEventListener('click',function(e){var o=e.target.closest('.severity-option');if(!o)return;segmentSeverityOptions.querySelectorAll('.severity-option').forEach(function(el){el.classList.remove('active')});o.classList.add('active');segmentSeverity=parseInt(o.getAttribute('data-severity'))});
+locateBtn.addEventListener('click',function(){if(!navigator.geolocation){showToast('⚠️ Геолокация не поддерживается');return}showToast('📍 Определяю...');navigator.geolocation.getCurrentPosition(function(pos){var lat=pos.coords.latitude,lng=pos.coords.longitude,acc=pos.coords.accuracy;if(myLocationMarker)map.removeLayer(myLocationMarker);if(myLocationCircle)map.removeLayer(myLocationCircle);myLocationMarker=L.marker([lat,lng],{icon:L.divIcon({className:'',html:'<div class="my-location-marker"></div>',iconSize:[24,24],iconAnchor:[12,24]})}).addTo(map);myLocationCircle=L.circle([lat,lng],{radius:acc,color:'#4285f4',fillColor:'#4285f4',fillOpacity:.15,weight:1}).addTo(map);map.flyTo([lat,lng],17,{duration:1.5});showToast('📍 Найдено! ±'+Math.round(acc)+' м')},function(err){var m='⚠️ Ошибка геолокации';if(err.code===1)m='⚠️ Разрешите доступ';if(err.code===2)m='⚠️ Включите GPS';if(err.code===3)m='⚠️ Превышено время';showToast(m)},{enableHighAccuracy:true,timeout:10000,maximumAge:0})});
+function searchAddress(){var q=searchInput.value.trim();if(!q){showToast('⚠️ Введите адрес');return}if(searchMarker)map.removeLayer(searchMarker);showToast('🔍 Ищу...');fetch('https://nominatim.openstreetmap.org/search?format=json&limit=10&addressdetails=1&q='+encodeURIComponent(q+CITY_SUFFIX),{headers:{'Accept-Language':'ru'}}).then(function(r){return r.json()}).then(function(data){if(data.length===0){showToast('⚠️ Ничего не найдено');return}if(data.length===1){goToResult(data[0]);return}showSearchResults(data)}).catch(function(e){console.error(e);showToast('⚠️ Ошибка поиска')})}
+function showSearchResults(results){searchResults.innerHTML='';results.forEach(function(item){var p=item.display_name.split(',');var d=document.createElement('div');d.className='search-result-item';d.innerHTML='<div class="search-result-name">📍 '+p[0]+'</div><div class="search-result-address">'+p.slice(1,3).join(',').trim()+'</div><div class="search-result-full">'+item.display_name+'</div>';d.addEventListener('click',function(){searchModalOverlay.classList.remove('show');goToResult(item)});searchResults.appendChild(d)});searchModalOverlay.classList.add('show')}
+function goToResult(item){var lat=parseFloat(item.lat),lng=parseFloat(item.lon);searchMarker=L.marker([lat,lng],{icon:L.divIcon({className:'',html:'<div style="background:#4285f4;border:3px solid #fff;border-radius:50%;width:18px;height:18px;box-shadow:0 0 15px rgba(66,133,244,.8);"></div>',iconSize:[18,18],iconAnchor:[9,9]})}).addTo(map);searchMarker.bindPopup('<b>'+item.display_name+'</b>').openPopup();map.flyTo([lat,lng],17,{duration:1.5});showToast('✅ '+item.display_name.split(',')[0])}
+searchBtn.addEventListener('click',searchAddress);
+searchInput.addEventListener('keypress',function(e){if(e.key==='Enter')searchAddress()});
+searchCancel.addEventListener('click',function(){searchModalOverlay.classList.remove('show')});
+function getIconForSeverity(s){var h,sz;if(s===1){h='<div class="pothole-marker pothole-minor"></div>';sz=16}else if(s===2){h='<div class="pothole-marker pothole-medium"></div>';sz=22}else{h='<div class="pothole-marker pothole-major">💥</div>';sz=28}return L.divIcon({className:'',html:h,iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]})}
+function getWinterIcon(type){var colors={snow:{bg:'#a8d8ff',border:'#4a90e2',emoji:'❄️'},ice:{bg:'#4fc3f7',border:'#0277bd',emoji:'🧊'},slush:{bg:'#bcaaa4',border:'#5d4037',emoji:'🥣'}};var c=colors[type]||colors.snow;return L.divIcon({className:'',html:'<div class="winter-marker" style="background:'+c.bg+';border-color:'+c.border+';">'+c.emoji+'</div>',iconSize:[30,30],iconAnchor:[15,15]})}
+function getSeverityName(s){if(s===1)return'🟡 Мелкая';if(s===2)return'🟠 Средняя';return'🔴 Опасная'}
+function getSegmentColor(s){if(s===1)return'#ffe066';if(s===2)return'#ff9f43';return'#ff4757'}
+function getWinterName(t){if(t==='snow')return'❄️ Снег';if(t==='ice')return'🧊 Гололёд';return'🥣 Каша'}
+function createMarker(lat,lng,description,id,severity,confirmations){severity=severity||1;confirmations=confirmations||1;var m=L.marker([lat,lng],{icon:getIconForSeverity(severity)});m._popupData={description:description,id:id,severity:severity,confirmations:confirmations,lat:lat,lng:lng};m.bindPopup(makePopupContent(m._popupData));clusterGroup.addLayer(m);return m}
+function makePopupContent(d){var c=d.confirmations>1?'<div style="font-size:11px;color:#ffa502;margin-top:4px;">👥 Подтверждено: '+d.confirmations+' раз</div>':'';return'<div style="min-width:180px;"><div style="font-size:11px;color:#888;margin-bottom:4px;">'+getSeverityName(d.severity)+'</div><b>'+d.description+'</b>'+c+'<br><small style="color:#888;">'+d.lat.toFixed(5)+', '+d.lng.toFixed(5)+'</small><br><button onclick="deletePothole('+d.id+')" style="margin-top:8px;background:#ff4757;color:white;border:none;padding:6px 12px;border-radius:15px;font-size:12px;cursor:pointer;">🗑 Удалить</button></div>'}
+function refreshPopup(p){var d=p.marker._popupData;d.confirmations=p.confirmations;p.marker.setPopupContent(makePopupContent(d))}
+function createSegmentLine(coords,id,severity,description){var latlngs=coords.map(function(c){return[c[0],c[1]]});var line=L.polyline(latlngs,{color:getSegmentColor(severity),weight:6,opacity:.8,lineCap:'round'});line._segmentData={id:id,severity:severity,description:description,coords:coords};line.bindPopup(makeSegmentPopup(line._segmentData));if(currentSeason==='summer')line.addTo(map);return line}
+function makeSegmentPopup(d){var len=0;for(var i=1;i<d.coords.length;i++)len+=distanceMeters(d.coords[i-1][0],d.coords[i-1][1],d.coords[i][0],d.coords[i][1]);return'<div style="min-width:180px;"><div style="font-size:11px;color:#e67e22;margin-bottom:4px;">🛣 УЧАСТОК · '+getSeverityName(d.severity)+'</div><b>'+(d.description||'Убитый участок')+'</b><br><small style="color:#888;">Длина: '+Math.round(len)+' м</small><br><button onclick="deleteSegment('+d.id+')" style="margin-top:8px;background:#ff4757;color:white;border:none;padding:6px 12px;border-radius:15px;font-size:12px;cursor:pointer;">🗑 Удалить</button></div>'}
+function createWinterMarker(lat,lng,type,description,id){var m=L.marker([lat,lng],{icon:getWinterIcon(type)});m._winterData={id:id,type:type,description:description,lat:lat,lng:lng};var name=getWinterName(type);m.bindPopup('<div style="min-width:160px;"><div style="font-size:11px;color:#8a80a8;margin-bottom:4px;">'+name+'</div><b>'+(description||'Без описания')+'</b><br><small style="color:#888;">'+lat.toFixed(5)+', '+lng.toFixed(5)+'</small><br><button onclick="deleteWinter('+id+')" style="margin-top:8px;background:#ff4757;color:white;border:none;padding:6px 12px;border-radius:15px;font-size:12px;cursor:pointer;">🗑 Удалить</button></div>');winterGroup.addLayer(m);return m}
+function loadAll(){
+fetch(SUPABASE_URL+'/rest/v1/'+TABLE_POTHOLES+'?select=*&order=created_at.desc',{headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}}).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(data){clusterGroup.clearLayers();potholes=[];data.forEach(function(row){var m=createMarker(row.lat,row.lng,row.description,row.id,row.severity,row.confirmations);potholes.push({id:row.id,lat:row.lat,lng:row.lng,description:row.description,severity:row.severity,confirmations:row.confirmations||1,marker:m})});updateCounter();setOnline(true)}).catch(function(e){console.error(e);setOnline(false)});
+fetch(SUPABASE_URL+'/rest/v1/'+TABLE_SEGMENTS+'?select=*&order=created_at.desc',{headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}}).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(data){segments.forEach(function(s){if(s.line)map.removeLayer(s.line)});segments=[];data.forEach(function(row){var line=createSegmentLine(row.coords,row.id,row.severity,row.description);segments.push({id:row.id,coords:row.coords,severity:row.severity,description:row.description,line:line})});updateCounter()}).catch(function(e){console.error('Segments:',e)});
+fetch(SUPABASE_URL+'/rest/v1/'+TABLE_WINTER+'?select=*&order=created_at.desc',{headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}}).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(data){winterGroup.clearLayers();winterReports=[];data.forEach(function(row){var m=createWinterMarker(row.lat,row.lng,row.type,row.description,row.id);winterReports.push({id:row.id,lat:row.lat,lng:row.lng,type:row.type,description:row.description,marker:m})});updateCounter();showToast('☁️ Загружено: '+potholes.length+' ям, '+winterReports.length+' зимних')}).catch(function(e){console.error('Winter:',e)})}
+function savePothole(lat,lng,description,severity){return fetch(SUPABASE_URL+'/rest/v1/'+TABLE_POTHOLES,{method:'POST',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify({lat:lat,lng:lng,description:description,severity:severity})}).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(d){return d[0]})}
+function saveSegment(coords,description,severity){return fetch(SUPABASE_URL+'/rest/v1/'+TABLE_SEGMENTS,{method:'POST',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify({coords:coords,description:description,severity:severity})}).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(d){return d[0]})}
+function saveWinter(lat,lng,type,description){return fetch(SUPABASE_URL+'/rest/v1/'+TABLE_WINTER,{method:'POST',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify({lat:lat,lng:lng,type:type,description:description})}).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(d){return d[0]})}
+function incrementConfirmations(id,cur){return fetch(SUPABASE_URL+'/rest/v1/'+TABLE_POTHOLES+'?id=eq.'+id,{method:'PATCH',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify({confirmations:(cur||1)+1})}).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(d){return d[0]})}
+function deletePotholeCloud(id){return fetch(SUPABASE_URL+'/rest/v1/'+TABLE_POTHOLES+'?id=eq.'+id,{method:'DELETE',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}})}
+function deleteSegmentCloud(id){return fetch(SUPABASE_URL+'/rest/v1/'+TABLE_SEGMENTS+'?id=eq.'+id,{method:'DELETE',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}})}
+function deleteWinterCloud(id){return fetch(SUPABASE_URL+'/rest/v1/'+TABLE_WINTER+'?id=eq.'+id,{method:'DELETE',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}})}
+window.deletePothole=function(id){if(!confirm('Удалить эту яму?'))return;deletePotholeCloud(id).then(function(){var i=potholes.findIndex(function(p){return p.id===id});if(i!==-1){clusterGroup.removeLayer(potholes[i].marker);potholes.splice(i,1)}updateCounter();showToast('🗑 Яма удалена')}).catch(function(e){console.error(e);showToast('⚠️ Не удалось')})};
+window.deleteSegment=function(id){if(!confirm('Удалить участок?'))return;deleteSegmentCloud(id).then(function(){var i=segments.findIndex(function(s){return s.id===id});if(i!==-1){map.removeLayer(segments[i].line);segments.splice(i,1)}updateCounter();showToast('🗑 Участок удалён')}).catch(function(e){console.error(e);showToast('⚠️ Не удалось')})};
+window.deleteWinter=function(id){if(!confirm('Удалить отметку?'))return;deleteWinterCloud(id).then(function(){var i=winterReports.findIndex(function(w){return w.id===id});if(i!==-1){winterGroup.removeLayer(winterReports[i].marker);winterReports.splice(i,1)}updateCounter();showToast('🗑 Удалено')}).catch(function(e){console.error(e);showToast('⚠️ Не удалось')})};
+addBtn.addEventListener('click',function(){if(segmentMode)cancelSegmentMode();if(winterAddType)cancelWinterMode();addingMode=!addingMode;if(addingMode){addBtn.textContent='✕ Отмена';addBtn.style.background='linear-gradient(135deg,#ff4757 0%,#c0392b 100%)';hintEl.classList.remove('hidden');hintEl.textContent='Увеличьте карту и ткните точнее';document.body.classList.add('map-adding');map.flyTo(map.getCenter(),18,{duration:.8})}else{addBtn.textContent='+ Яма';addBtn.style.background='linear-gradient(135deg,#6a5acd 0%,#483d8b 100%)';hintEl.classList.add('hidden');document.body.classList.remove('map-adding')}});
+segmentBtn.addEventListener('click',function(){if(addingMode){addingMode=false;addBtn.textContent='+ Яма';addBtn.style.background='linear-gradient(135deg,#6a5acd 0%,#483d8b 100%)';document.body.classList.remove('map-adding')}if(winterAddType)cancelWinterMode();segmentMode=!segmentMode;if(segmentMode){segmentBtn.textContent='✕ Отмена';segmentBtn.style.background='linear-gradient(135deg,#ff4757 0%,#c0392b 100%)';hintEl.classList.remove('hidden');hintEl.textContent='Ткните начало участка, затем конец';segmentPoints=[]}else cancelSegmentMode()});
+function cancelSegmentMode(){segmentMode=false;segmentBtn.textContent='🛣 Участок';segmentBtn.style.background='linear-gradient(135deg,#e67e22 0%,#d35400 100%)';hintEl.classList.add('hidden');if(segmentStart){map.removeLayer(segmentStart);segmentStart=null}if(segmentEnd){map.removeLayer(segmentEnd);segmentEnd=null}if(segmentLine){map.removeLayer(segmentLine);segmentLine=null}segmentPoints=[]}
+function startWinterMode(type){if(addingMode){addingMode=false;addBtn.textContent='+ Яма';addBtn.style.background='linear-gradient(135deg,#6a5acd 0%,#483d8b 100%)';document.body.classList.remove('map-adding')}if(segmentMode)cancelSegmentMode();if(winterAddType===type){cancelWinterMode();return}winterAddType=type;[snowBtn,iceBtn,slushBtn].forEach(function(b){b.style.opacity='.5'});if(type==='snow')snowBtn.style.opacity='1';if(type==='ice')iceBtn.style.opacity='1';if(type==='slush')slushBtn.style.opacity='1';hintEl.classList.remove('hidden');hintEl.textContent='Ткни в карту — '+getWinterName(type)}
+function cancelWinterMode(){winterAddType=null;[snowBtn,iceBtn,slushBtn].forEach(function(b){b.style.opacity='1'});hintEl.classList.add('hidden')}
+snowBtn.addEventListener('click',function(){startWinterMode('snow')});
+iceBtn.addEventListener('click',function(){startWinterMode('ice')});
+slushBtn.addEventListener('click',function(){startWinterMode('slush')});
+map.on('click',function(e){var lat=e.latlng.lat,lng=e.latlng.lng;
+if(winterAddType){var type=winterAddType;cancelWinterMode();winterDraftCoords={lat:lat,lng:lng,type:type};winterModalTitle.textContent=getWinterName(type)+' на дороге';winterInput.value='';winterModalOverlay.classList.add('show');setTimeout(function(){winterInput.focus()},100);return}
+if(addingMode){document.body.classList.remove('map-adding');if(draftMarker)map.removeLayer(draftMarker);var di=L.divIcon({className:'',html:'<div class="draft-marker"></div>',iconSize:[26,26],iconAnchor:[13,13]});draftMarker=L.marker([lat,lng],{icon:di,draggable:true}).addTo(map);draftTitle.textContent='📍 Уточните местоположение';draftSubtitle.textContent='Перетащите маркер, увеличьте карту, потом сохраните';draftPanel.classList.add('show');addingMode=false;addBtn.textContent='+ Яма';addBtn.style.background='linear-gradient(135deg,#6a5acd 0%,#483d8b 100%)';hintEl.classList.add('hidden');return}
+if(segmentMode){var pi=L.divIcon({className:'',html:'<div class="segment-point"></div>',iconSize:[20,20],iconAnchor:[10,10]});if(segmentPoints.length===0){segmentStart=L.marker([lat,lng],{icon:pi}).addTo(map);segmentPoints.push([lat,lng]);hintEl.textContent='Теперь ткните конец участка'}else{segmentEnd=L.marker([lat,lng],{icon:pi}).addTo(map);segmentPoints.push([lat,lng]);if(segmentLine)map.removeLayer(segmentLine);segmentLine=L.polyline(segmentPoints,{color:'#e67e22',weight:6,opacity:.8}).addTo(map);hintEl.textContent='Нажмите «Сохранить» внизу';draftTitle.textContent='🛣 Участок дороги';draftSubtitle.textContent='Проверьте линию, потом сохраните';draftPanel.classList.add('show');segmentMode=false;segmentBtn.textContent='🛣 Участок';segmentBtn.style.background='linear-gradient(135deg,#e67e22 0%,#d35400 100%)'}}});
+draftCancel.addEventListener('click',function(){if(draftMarker){map.removeLayer(draftMarker);draftMarker=null}if(segmentStart){map.removeLayer(segmentStart);segmentStart=null}if(segmentEnd){map.removeLayer(segmentEnd);segmentEnd=null}if(segmentLine){map.removeLayer(segmentLine);segmentLine=null}segmentPoints=[];draftPanel.classList.remove('show');document.body.classList.remove('map-adding');showToast('Отменено')});
+draftSave.addEventListener('click',function(){if(segmentPoints.length>=2){segmentInput.value='';segmentSeverity=1;segmentSeverityOptions.querySelectorAll('.severity-option').forEach(function(el,i){el.classList.toggle('active',i===0)});segmentModalOverlay.classList.add('show');setTimeout(function(){segmentInput.focus()},100);return}if(!draftMarker)return;var lat=draftMarker.getLatLng().lat,lng=draftMarker.getLatLng().lng;var nb=findNearbyPothole(lat,lng);if(nb){nearbyPotholeId=nb.id;var d=Math.round(distanceMeters(lat,lng,nb.lat,nb.lng));nearbyInfo.innerHTML='Рядом (в '+d+' м) уже есть яма:<br><b>'+nb.description+'</b> ('+getSeverityName(nb.severity)+')<br><br>Это та же яма или новая?';nearbyOverlay.classList.add('show');return}openPotholeModal(lat,lng)});
+nearbyConfirm.addEventListener('click',function(){if(!nearbyPotholeId)return;var p=potholes.find(function(x){return x.id===nearbyPotholeId});if(!p){nearbyOverlay.classList.remove('show');return}incrementConfirmations(p.id,p.confirmations).then(function(row){p.confirmations=row.confirmations;refreshPopup(p);showToast('✅ Подтверждено! Теперь '+row.confirmations+' раз');closeDraftNearby()}).catch(function(e){console.error(e);showToast('⚠️ Не удалось');closeDraftNearby()})});
+nearbyNew.addEventListener('click',function(){nearbyOverlay.classList.remove('show');if(!draftMarker)return;var lat=draftMarker.getLatLng().lat,lng=draftMarker.getLatLng().lng;openPotholeModal(lat,lng)});
+nearbyCancel.addEventListener('click',function(){nearbyOverlay.classList.remove('show')});
+function closeDraftNearby(){if(draftMarker){map.removeLayer(draftMarker);draftMarker=null}draftPanel.classList.remove('show');nearbyOverlay.classList.remove('show');nearbyPotholeId=null;document.body.classList.remove('map-adding')}
+function openPotholeModal(lat,lng){modalInput.value='';selectedSeverity=1;severityOptions.querySelectorAll('.severity-option').forEach(function(el,i){el.classList.toggle('active',i===0)});modalOverlay.classList.add('show');setTimeout(function(){modalInput.focus()},100);window._draftCoords={lat:lat,lng:lng}}
+modalOk.addEventListener('click',function(){var d=modalInput.value.trim()||'Яма';modalOverlay.classList.remove('show');finalizePothole(window._draftCoords.lat,window._draftCoords.lng,d,selectedSeverity)});
+modalSkip.addEventListener('click',function(){modalOverlay.classList.remove('show');finalizePothole(window._draftCoords.lat,window._draftCoords.lng,'Яма',selectedSeverity)});
+modalInput.addEventListener('keypress',function(e){if(e.key==='Enter')modalOk.click()});
+function finalizePothole(lat,lng,description,severity){savePothole(lat,lng,description,severity).then(function(row){if(draftMarker){map.removeLayer(draftMarker);draftMarker=null}draftPanel.classList.remove('show');document.body.classList.remove('map-adding');var m=createMarker(row.lat,row.lng,row.description,row.id,row.severity,row.confirmations);potholes.push({id:row.id,lat:row.lat,lng:row.lng,description:row.description,severity:row.severity,confirmations:row.confirmations||1,marker:m});updateCounter();showToast('✅ Яма сохранена')}).catch(function(e){console.error(e);showToast('⚠️ Не удалось сохранить')})}
+segmentOk.addEventListener('click',function(){var d=segmentInput.value.trim()||'Убитый участок';segmentModalOverlay.classList.remove('show');finalizeSegment(segmentPoints,d,segmentSeverity)});
+segmentSkip.addEventListener('click',function(){segmentModalOverlay.classList.remove('show');finalizeSegment(segmentPoints,'Убитый участок',segmentSeverity)});
+function finalizeSegment(coords,description,severity){saveSegment(coords,description,severity).then(function(row){if(segmentStart){map.removeLayer(segmentStart);segmentStart=null}if(segmentEnd){map.removeLayer(segmentEnd);segmentEnd=null}if(segmentLine){map.removeLayer(segmentLine);segmentLine=null}segmentPoints=[];draftPanel.classList.remove('show');var line=createSegmentLine(row.coords,row.id,row.severity,row.description);segments.push({id:row.id,coords:row.coords,severity:row.severity,description:row.description,line:line});updateCounter();showToast('✅ Участок сохранён')}).catch(function(e){console.error(e);showToast('⚠️ Не удалось')})}
+winterOk.addEventListener('click',function(){var d=winterInput.value.trim()||'';winterModalOverlay.classList.remove('show');finalizeWinter(winterDraftCoords.lat,winterDraftCoords.lng,winterDraftCoords.type,d)});
+winterSkip.addEventListener('click',function(){winterModalOverlay.classList.remove('show');finalizeWinter(winterDraftCoords.lat,winterDraftCoords.lng,winterDraftCoords.type,'')});
+winterInput.addEventListener('keypress',function(e){if(e.key==='Enter')winterOk.click()});
+function finalizeWinter(lat,lng,type,description){saveWinter(lat,lng,type,description).then(function(row){var m=createWinterMarker(row.lat,row.lng,row.type,row.description,row.id);winterReports.push({id:row.id,lat:row.lat,lng:row.lng,type:row.type,description:row.description,marker:m});updateCounter();showToast('✅ '+getWinterName(type)+' сохранён')}).catch(function(e){console.error(e);showToast('⚠️ Не удалось')})}
+loadAll();
+setTimeout(function(){hintEl.classList.add('hidden')},6000);
+</script>
 </body>
 </html>
