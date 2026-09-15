@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    <!-- Плагин кластеризации -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
@@ -39,6 +38,7 @@
         .stats-label { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #8a80a8; }
         .stats-value { font-size: 22px; font-weight: 700; color: #f0e8ff; }
         .add-btn { background: linear-gradient(135deg, #6a5acd 0%, #483d8b 100%); border: none; color: #fff; padding: 12px 20px; border-radius: 30px; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+        .segment-btn { background: linear-gradient(135deg, #e67e22 0%, #d35400 100%); border: none; color: #fff; padding: 12px 20px; border-radius: 30px; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap; }
         .clear-btn { background: transparent; border: 1px solid rgba(255, 71, 87, 0.5); color: #ff6b7a; padding: 8px 14px; border-radius: 20px; font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; }
         .locate-btn { background: transparent; border: 1px solid rgba(66, 133, 244, 0.5); color: #7aa7ff; padding: 8px 14px; border-radius: 20px; font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; }
 
@@ -50,6 +50,8 @@
 
         .draft-marker { background: #ffa502; border: 3px solid #fff; border-radius: 50%; width: 26px; height: 26px; box-shadow: 0 0 20px rgba(255, 165, 2, 1); animation: draftPulse 1s infinite; }
         @keyframes draftPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(1.15); } }
+
+        .segment-point { background: #e67e22; border: 3px solid #fff; border-radius: 50%; width: 20px; height: 20px; box-shadow: 0 0 15px rgba(230, 126, 34, 0.9); animation: draftPulse 1s infinite; }
 
         .my-location-marker { background: #4285f4; border: 3px solid #fff; border-radius: 50% 50% 50% 0; width: 24px; height: 24px; transform: rotate(-45deg); box-shadow: 0 0 15px rgba(66, 133, 244, 0.8); position: relative; }
         .my-location-marker::after { content: ''; position: absolute; width: 8px; height: 8px; background: #fff; border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(45deg); }
@@ -102,27 +104,18 @@
         .nearby-info { background: rgba(255, 165, 2, 0.1); border: 1px solid rgba(255, 165, 2, 0.4); border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; font-size: 13px; color: #ffd88a; line-height: 1.4; }
         .nearby-info b { color: #ffa502; }
 
-        /* Отключаем клики по маркерам в режиме добавления */
         body.map-adding .leaflet-marker-icon,
         body.map-adding .leaflet-marker-shadow {
             pointer-events: none !important;
         }
 
-        /* ===== КЛАСТЕРЫ ===== */
         .marker-cluster-small { background-color: rgba(255, 224, 102, 0.6); }
         .marker-cluster-small div { background-color: #ffe066; color: #1a1a2e; }
-
         .marker-cluster-medium { background-color: rgba(255, 159, 67, 0.6); }
         .marker-cluster-medium div { background-color: #ff9f43; color: #fff; }
-
         .marker-cluster-large { background-color: rgba(255, 71, 87, 0.6); }
         .marker-cluster-large div { background-color: #ff4757; color: #fff; }
-
-        .marker-cluster div {
-            font-weight: 700;
-            font-size: 14px;
-            font-family: inherit;
-        }
+        .marker-cluster div { font-weight: 700; font-size: 14px; font-family: inherit; }
     </style>
 </head>
 <body>
@@ -145,20 +138,20 @@
     <div class="bottom-panel" id="bottomPanel">
         <div class="panel-row">
             <div class="stats">
-                <div class="stats-label">Ям на карте</div>
-                <div class="stats-value" id="potholeCount">0</div>
+                <div class="stats-label">Ям / участков</div>
+                <div class="stats-value"><span id="potholeCount">0</span> / <span id="segmentCount">0</span></div>
             </div>
-            <button class="add-btn" id="addBtn">+ Добавить яму</button>
+            <button class="add-btn" id="addBtn">+ Яма</button>
         </div>
         <div class="panel-row">
-            <button class="clear-btn" id="clearBtn">🗑 Очистить мои</button>
+            <button class="segment-btn" id="segmentBtn">🛣 Участок</button>
             <button class="locate-btn" id="locateBtn">📍 Я здесь</button>
         </div>
     </div>
 
     <div class="draft-panel" id="draftPanel">
-        <div class="draft-title">📍 Уточните местоположение</div>
-        <div class="draft-subtitle">Перетащите маркер, увеличьте карту, потом сохраните</div>
+        <div class="draft-title" id="draftTitle">📍 Уточните местоположение</div>
+        <div class="draft-subtitle" id="draftSubtitle">Перетащите маркер, увеличьте карту, потом сохраните</div>
         <div class="draft-buttons">
             <button class="draft-btn-cancel" id="draftCancel">✕ Отмена</button>
             <button class="draft-btn-save" id="draftSave">✅ Сохранить</button>
@@ -169,7 +162,6 @@
         <div class="modal">
             <div class="modal-title">Что здесь за яма?</div>
             <input type="text" class="modal-input" id="modalInput" placeholder="Например: большая яма" maxlength="100">
-            
             <div class="severity-label">Уровень опасности:</div>
             <div class="severity-options" id="severityOptions">
                 <div class="severity-option active" data-severity="1">
@@ -194,10 +186,44 @@
                     </div>
                 </div>
             </div>
-
             <div class="modal-buttons">
                 <button class="modal-btn-skip" id="modalSkip">Пропустить</button>
                 <button class="modal-btn-ok" id="modalOk">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="segmentModalOverlay">
+        <div class="modal">
+            <div class="modal-title">Опишите участок</div>
+            <input type="text" class="modal-input" id="segmentInput" placeholder="Например: убитая дорога у дома 15" maxlength="100">
+            <div class="severity-label">Уровень опасности:</div>
+            <div class="severity-options" id="segmentSeverityOptions">
+                <div class="severity-option active" data-severity="1">
+                    <div class="severity-circle minor"></div>
+                    <div class="severity-text">
+                        <div class="severity-name">Мелкие</div>
+                        <div class="severity-desc">Трещины, ехать можно</div>
+                    </div>
+                </div>
+                <div class="severity-option" data-severity="2">
+                    <div class="severity-circle medium"></div>
+                    <div class="severity-text">
+                        <div class="severity-name">Средние</div>
+                        <div class="severity-desc">Заметные ямы</div>
+                    </div>
+                </div>
+                <div class="severity-option" data-severity="3">
+                    <div class="severity-circle major">💥</div>
+                    <div class="severity-text">
+                        <div class="severity-name">Опасные</div>
+                        <div class="severity-desc">Убито, лучше объехать</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn-skip" id="segmentSkip">Пропустить</button>
+                <button class="modal-btn-ok" id="segmentOk">Сохранить</button>
             </div>
         </div>
     </div>
@@ -215,9 +241,7 @@
     <div class="modal-overlay" id="nearbyOverlay">
         <div class="modal">
             <div class="modal-title">⚠️ Рядом уже есть яма</div>
-            <div class="nearby-info" id="nearbyInfo">
-                Здесь уже отмечена яма. Что делать?
-            </div>
+            <div class="nearby-info" id="nearbyInfo">Здесь уже отмечена яма. Что делать?</div>
             <div class="modal-buttons" style="flex-direction: column;">
                 <button class="modal-btn-ok" id="nearbyConfirm" style="width: 100%;">✅ Подтвердить (яма та же)</button>
                 <button class="modal-btn-skip" id="nearbyNew" style="width: 100%;">➕ Создать новую</button>
@@ -231,7 +255,8 @@
     <script>
         var SUPABASE_URL = 'https://xmajdholmfhuizavwhmr.supabase.co';
         var SUPABASE_KEY = 'sb_publishable_QF7Ss8n3vhlbe70iJv4tKA_2dy8ijnS';
-        var TABLE_NAME = 'potholes';
+        var TABLE_POTHOLES = 'potholes';
+        var TABLE_SEGMENTS = 'road_segments';
         var DUPLICATE_DISTANCE = 5;
 
         var OTRADNY_CENTER = [53.378, 51.334];
@@ -246,7 +271,6 @@
             attribution: '© OpenStreetMap'
         }).addTo(map);
 
-        // ===== КЛАСТЕРЫ =====
         var clusterGroup = L.markerClusterGroup({
             maxClusterRadius: 60,
             spiderfyOnMaxZoom: true,
@@ -258,7 +282,6 @@
                 var size = 'small';
                 if (count >= 10) size = 'large';
                 else if (count >= 5) size = 'medium';
-
                 return L.divIcon({
                     html: '<div><span>' + count + '</span></div>',
                     className: 'marker-cluster marker-cluster-' + size,
@@ -269,24 +292,35 @@
         map.addLayer(clusterGroup);
 
         var potholes = [];
+        var segments = [];
         var addingMode = false;
+        var segmentMode = false;
         var draftMarker = null;
+        var segmentStart = null;
+        var segmentEnd = null;
+        var segmentLine = null;
+        var segmentPoints = [];
         var myLocationMarker = null;
         var myLocationCircle = null;
         var searchMarker = null;
         var selectedSeverity = 1;
+        var segmentSeverity = 1;
         var nearbyPotholeId = null;
 
         var addBtn = document.getElementById('addBtn');
+        var segmentBtn = document.getElementById('segmentBtn');
         var clearBtn = document.getElementById('clearBtn');
         var locateBtn = document.getElementById('locateBtn');
         var potholeCountEl = document.getElementById('potholeCount');
+        var segmentCountEl = document.getElementById('segmentCount');
         var toastEl = document.getElementById('toast');
         var hintEl = document.getElementById('hint');
         var headerBadge = document.getElementById('headerBadge');
         var searchInput = document.getElementById('searchInput');
         var searchBtn = document.getElementById('searchBtn');
         var draftPanel = document.getElementById('draftPanel');
+        var draftTitle = document.getElementById('draftTitle');
+        var draftSubtitle = document.getElementById('draftSubtitle');
         var draftSave = document.getElementById('draftSave');
         var draftCancel = document.getElementById('draftCancel');
         var modalOverlay = document.getElementById('modalOverlay');
@@ -294,6 +328,11 @@
         var modalOk = document.getElementById('modalOk');
         var modalSkip = document.getElementById('modalSkip');
         var severityOptions = document.getElementById('severityOptions');
+        var segmentModalOverlay = document.getElementById('segmentModalOverlay');
+        var segmentInput = document.getElementById('segmentInput');
+        var segmentOk = document.getElementById('segmentOk');
+        var segmentSkip = document.getElementById('segmentSkip');
+        var segmentSeverityOptions = document.getElementById('segmentSeverityOptions');
         var searchModalOverlay = document.getElementById('searchModalOverlay');
         var searchResults = document.getElementById('searchResults');
         var searchCancel = document.getElementById('searchCancel');
@@ -311,6 +350,7 @@
 
         function updateCounter() {
             potholeCountEl.textContent = potholes.length;
+            segmentCountEl.textContent = segments.length;
         }
 
         function setOnline(isOnline) {
@@ -337,9 +377,7 @@
         function findNearbyPothole(lat, lng) {
             for (var i = 0; i < potholes.length; i++) {
                 var d = distanceMeters(lat, lng, potholes[i].lat, potholes[i].lng);
-                if (d <= DUPLICATE_DISTANCE) {
-                    return potholes[i];
-                }
+                if (d <= DUPLICATE_DISTANCE) return potholes[i];
             }
             return null;
         }
@@ -347,44 +385,32 @@
         severityOptions.addEventListener('click', function(e) {
             var option = e.target.closest('.severity-option');
             if (!option) return;
-            document.querySelectorAll('.severity-option').forEach(function(el) {
-                el.classList.remove('active');
-            });
+            severityOptions.querySelectorAll('.severity-option').forEach(function(el) { el.classList.remove('active'); });
             option.classList.add('active');
             selectedSeverity = parseInt(option.getAttribute('data-severity'));
         });
 
+        segmentSeverityOptions.addEventListener('click', function(e) {
+            var option = e.target.closest('.severity-option');
+            if (!option) return;
+            segmentSeverityOptions.querySelectorAll('.severity-option').forEach(function(el) { el.classList.remove('active'); });
+            option.classList.add('active');
+            segmentSeverity = parseInt(option.getAttribute('data-severity'));
+        });
+
         locateBtn.addEventListener('click', function() {
-            if (!navigator.geolocation) {
-                showToast('⚠️ Геолокация не поддерживается');
-                return;
-            }
+            if (!navigator.geolocation) { showToast('⚠️ Геолокация не поддерживается'); return; }
             showToast('📍 Определяю...');
             navigator.geolocation.getCurrentPosition(
                 function(position) {
                     var lat = position.coords.latitude;
                     var lng = position.coords.longitude;
                     var accuracy = position.coords.accuracy;
-
                     if (myLocationMarker) map.removeLayer(myLocationMarker);
                     if (myLocationCircle) map.removeLayer(myLocationCircle);
-
-                    var myIcon = L.divIcon({
-                        className: '',
-                        html: '<div class="my-location-marker"></div>',
-                        iconSize: [24, 24],
-                        iconAnchor: [12, 24]
-                    });
+                    var myIcon = L.divIcon({ className: '', html: '<div class="my-location-marker"></div>', iconSize: [24, 24], iconAnchor: [12, 24] });
                     myLocationMarker = L.marker([lat, lng], { icon: myIcon }).addTo(map);
-
-                    myLocationCircle = L.circle([lat, lng], {
-                        radius: accuracy,
-                        color: '#4285f4',
-                        fillColor: '#4285f4',
-                        fillOpacity: 0.15,
-                        weight: 1
-                    }).addTo(map);
-
+                    myLocationCircle = L.circle([lat, lng], { radius: accuracy, color: '#4285f4', fillColor: '#4285f4', fillOpacity: 0.15, weight: 1 }).addTo(map);
                     map.flyTo([lat, lng], 17, { duration: 1.5 });
                     showToast('📍 Найдено! Точность: ±' + Math.round(accuracy) + ' м');
                 },
@@ -403,28 +429,16 @@
             var query = searchInput.value.trim();
             if (!query) { showToast('⚠️ Введите адрес'); return; }
             if (searchMarker) map.removeLayer(searchMarker);
-
             showToast('🔍 Ищу...');
-            var fullQuery = query + CITY_SUFFIX;
-            var url = 'https://nominatim.openstreetmap.org/search?format=json&limit=10&addressdetails=1&q=' + encodeURIComponent(fullQuery);
-
+            var url = 'https://nominatim.openstreetmap.org/search?format=json&limit=10&addressdetails=1&q=' + encodeURIComponent(query + CITY_SUFFIX);
             fetch(url, { headers: { 'Accept-Language': 'ru' } })
-            .then(function(response) { return response.json(); })
+            .then(function(r) { return r.json(); })
             .then(function(data) {
-                if (data.length === 0) {
-                    showToast('⚠️ Ничего не найдено');
-                    return;
-                }
-                if (data.length === 1) {
-                    goToResult(data[0]);
-                    return;
-                }
+                if (data.length === 0) { showToast('⚠️ Ничего не найдено'); return; }
+                if (data.length === 1) { goToResult(data[0]); return; }
                 showSearchResults(data);
             })
-            .catch(function(error) {
-                console.error(error);
-                showToast('⚠️ Ошибка поиска');
-            });
+            .catch(function(e) { console.error(e); showToast('⚠️ Ошибка поиска'); });
         }
 
         function showSearchResults(results) {
@@ -433,19 +447,12 @@
                 var parts = item.display_name.split(',');
                 var name = parts[0] || item.display_name;
                 var address = parts.slice(1, 3).join(',').trim();
-                var full = item.display_name;
-
                 var div = document.createElement('div');
                 div.className = 'search-result-item';
-                div.innerHTML =
-                    '<div class="search-result-name">📍 ' + name + '</div>' +
-                    '<div class="search-result-address">' + address + '</div>' +
-                    '<div class="search-result-full">' + full + '</div>';
-
-                div.addEventListener('click', function() {
-                    searchModalOverlay.classList.remove('show');
-                    goToResult(item);
-                });
+                div.innerHTML = '<div class="search-result-name">📍 ' + name + '</div>' +
+                                '<div class="search-result-address">' + address + '</div>' +
+                                '<div class="search-result-full">' + item.display_name + '</div>';
+                div.addEventListener('click', function() { searchModalOverlay.classList.remove('show'); goToResult(item); });
                 searchResults.appendChild(div);
             });
             searchModalOverlay.classList.add('show');
@@ -454,14 +461,8 @@
         function goToResult(item) {
             var lat = parseFloat(item.lat);
             var lng = parseFloat(item.lon);
-
             searchMarker = L.marker([lat, lng], {
-                icon: L.divIcon({
-                    className: '',
-                    html: '<div style="background:#4285f4;border:3px solid #fff;border-radius:50%;width:18px;height:18px;box-shadow:0 0 15px rgba(66,133,244,0.8);"></div>',
-                    iconSize: [18, 18],
-                    iconAnchor: [9, 9]
-                })
+                icon: L.divIcon({ className: '', html: '<div style="background:#4285f4;border:3px solid #fff;border-radius:50%;width:18px;height:18px;box-shadow:0 0 15px rgba(66,133,244,0.8);"></div>', iconSize: [18, 18], iconAnchor: [9, 9] })
             }).addTo(map);
             searchMarker.bindPopup('<b>' + item.display_name + '</b>').openPopup();
             map.flyTo([lat, lng], 17, { duration: 1.5 });
@@ -469,31 +470,15 @@
         }
 
         searchBtn.addEventListener('click', searchAddress);
-        searchInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') searchAddress();
-        });
-        searchCancel.addEventListener('click', function() {
-            searchModalOverlay.classList.remove('show');
-        });
+        searchInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') searchAddress(); });
+        searchCancel.addEventListener('click', function() { searchModalOverlay.classList.remove('show'); });
 
         function getIconForSeverity(severity) {
             var html, size;
-            if (severity === 1) {
-                html = '<div class="pothole-marker pothole-minor"></div>';
-                size = 16;
-            } else if (severity === 2) {
-                html = '<div class="pothole-marker pothole-medium"></div>';
-                size = 22;
-            } else {
-                html = '<div class="pothole-marker pothole-major">💥</div>';
-                size = 28;
-            }
-            return L.divIcon({
-                className: '',
-                html: html,
-                iconSize: [size, size],
-                iconAnchor: [size/2, size/2]
-            });
+            if (severity === 1) { html = '<div class="pothole-marker pothole-minor"></div>'; size = 16; }
+            else if (severity === 2) { html = '<div class="pothole-marker pothole-medium"></div>'; size = 22; }
+            else { html = '<div class="pothole-marker pothole-major">💥</div>'; size = 28; }
+            return L.divIcon({ className: '', html: html, iconSize: [size, size], iconAnchor: [size/2, size/2] });
         }
 
         function getSeverityName(severity) {
@@ -502,11 +487,16 @@
             return '🔴 Опасная';
         }
 
+        function getSegmentColor(severity) {
+            if (severity === 1) return '#ffe066';
+            if (severity === 2) return '#ff9f43';
+            return '#ff4757';
+        }
+
         function createMarker(lat, lng, description, id, severity, confirmations) {
             severity = severity || 1;
             confirmations = confirmations || 1;
-            var icon = getIconForSeverity(severity);
-            var marker = L.marker([lat, lng], { icon: icon });
+            var marker = L.marker([lat, lng], { icon: getIconForSeverity(severity) });
             marker._popupData = { description: description, id: id, severity: severity, confirmations: confirmations, lat: lat, lng: lng };
             marker.bindPopup(makePopupContent(marker._popupData));
             clusterGroup.addLayer(marker);
@@ -517,13 +507,9 @@
             var confText = data.confirmations > 1 ? '<div style="font-size: 11px; color: #ffa502; margin-top: 4px;">👥 Подтверждено: ' + data.confirmations + ' раз</div>' : '';
             return '<div style="min-width: 180px;">' +
                     '<div style="font-size: 11px; color: #888; margin-bottom: 4px;">' + getSeverityName(data.severity) + '</div>' +
-                    '<b>' + data.description + '</b>' +
-                    confText +
+                    '<b>' + data.description + '</b>' + confText +
                     '<br><small style="color: #888;">' + data.lat.toFixed(5) + ', ' + data.lng.toFixed(5) + '</small><br>' +
-                    '<button onclick="deletePothole(' + data.id + ')" ' +
-                    'style="margin-top: 8px; background: #ff4757; color: white; border: none; ' +
-                    'padding: 6px 12px; border-radius: 15px; font-size: 12px; cursor: pointer;">' +
-                    '🗑 Удалить</button>' +
+                    '<button onclick="deletePothole(' + data.id + ')" style="margin-top: 8px; background: #ff4757; color: white; border: none; padding: 6px 12px; border-radius: 15px; font-size: 12px; cursor: pointer;">🗑 Удалить</button>' +
                 '</div>';
         }
 
@@ -533,111 +519,131 @@
             pothole.marker.setPopupContent(makePopupContent(data));
         }
 
+        function createSegmentLine(coords, id, severity, description) {
+            var latlngs = coords.map(function(c) { return [c[0], c[1]]; });
+            var color = getSegmentColor(severity);
+            var line = L.polyline(latlngs, { color: color, weight: 6, opacity: 0.8, lineCap: 'round' });
+            line.addTo(map);
+            line._segmentData = { id: id, severity: severity, description: description, coords: coords };
+            line.bindPopup(makeSegmentPopup(line._segmentData));
+            return line;
+        }
+
+        function makeSegmentPopup(data) {
+            var lengthM = 0;
+            for (var i = 1; i < data.coords.length; i++) {
+                lengthM += distanceMeters(data.coords[i-1][0], data.coords[i-1][1], data.coords[i][0], data.coords[i][1]);
+            }
+            var lengthText = Math.round(lengthM) + ' м';
+            return '<div style="min-width: 180px;">' +
+                    '<div style="font-size: 11px; color: #e67e22; margin-bottom: 4px;">🛣 УЧАСТОК · ' + getSeverityName(data.severity) + '</div>' +
+                    '<b>' + (data.description || 'Убитый участок') + '</b><br>' +
+                    '<small style="color: #888;">Длина: ' + lengthText + '</small><br>' +
+                    '<button onclick="deleteSegment(' + data.id + ')" style="margin-top: 8px; background: #ff4757; color: white; border: none; padding: 6px 12px; border-radius: 15px; font-size: 12px; cursor: pointer;">🗑 Удалить</button>' +
+                '</div>';
+        }
+
         function loadFromCloud() {
-            fetch(SUPABASE_URL + '/rest/v1/' + TABLE_NAME + '?select=*&order=created_at.desc', {
-                method: 'GET',
-                headers: {
-                    'apikey': SUPABASE_KEY,
-                    'Authorization': 'Bearer ' + SUPABASE_KEY
-                }
+            fetch(SUPABASE_URL + '/rest/v1/' + TABLE_POTHOLES + '?select=*&order=created_at.desc', {
+                headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
             })
-            .then(function(response) {
-                if (!response.ok) throw new Error('Ошибка загрузки: ' + response.status);
-                return response.json();
-            })
+            .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
             .then(function(data) {
                 clusterGroup.clearLayers();
                 potholes = [];
-
                 data.forEach(function(row) {
                     var marker = createMarker(row.lat, row.lng, row.description, row.id, row.severity, row.confirmations);
-                    potholes.push({
-                        id: row.id, lat: row.lat, lng: row.lng,
-                        description: row.description, severity: row.severity,
-                        confirmations: row.confirmations || 1,
-                        marker: marker
-                    });
+                    potholes.push({ id: row.id, lat: row.lat, lng: row.lng, description: row.description, severity: row.severity, confirmations: row.confirmations || 1, marker: marker });
                 });
-
                 updateCounter();
                 setOnline(true);
                 showToast('☁️ Загружено ям: ' + potholes.length);
             })
-            .catch(function(error) {
-                console.error('Ошибка загрузки:', error);
-                setOnline(false);
-                showToast('⚠️ Не удалось загрузить ямы');
-            });
+            .catch(function(e) { console.error(e); setOnline(false); showToast('⚠️ Не удалось загрузить ямы'); });
+
+            fetch(SUPABASE_URL + '/rest/v1/' + TABLE_SEGMENTS + '?select=*&order=created_at.desc', {
+                headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+            })
+            .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+            .then(function(data) {
+                segments.forEach(function(s) { if (s.line) map.removeLayer(s.line); });
+                segments = [];
+                data.forEach(function(row) {
+                    var line = createSegmentLine(row.coords, row.id, row.severity, row.description);
+                    segments.push({ id: row.id, coords: row.coords, severity: row.severity, description: row.description, line: line });
+                });
+                updateCounter();
+            })
+            .catch(function(e) { console.error('Segments load error:', e); });
         }
 
         function saveToCloud(lat, lng, description, severity) {
-            return fetch(SUPABASE_URL + '/rest/v1/' + TABLE_NAME, {
+            return fetch(SUPABASE_URL + '/rest/v1/' + TABLE_POTHOLES, {
                 method: 'POST',
-                headers: {
-                    'apikey': SUPABASE_KEY,
-                    'Authorization': 'Bearer ' + SUPABASE_KEY,
-                    'Content-Type': 'application/json',
-                    'Prefer': 'return=representation'
-                },
-                body: JSON.stringify({
-                    lat: lat, lng: lng, description: description, severity: severity
-                })
+                headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+                body: JSON.stringify({ lat: lat, lng: lng, description: description, severity: severity })
             })
-            .then(function(response) {
-                if (!response.ok) throw new Error('Ошибка сохранения: ' + response.status);
-                return response.json();
+            .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+            .then(function(data) { return data[0]; });
+        }
+
+        function saveSegmentToCloud(coords, description, severity) {
+            return fetch(SUPABASE_URL + '/rest/v1/' + TABLE_SEGMENTS, {
+                method: 'POST',
+                headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+                body: JSON.stringify({ coords: coords, description: description, severity: severity })
             })
+            .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
             .then(function(data) { return data[0]; });
         }
 
         function incrementConfirmations(id, current) {
             var newCount = (current || 1) + 1;
-            return fetch(SUPABASE_URL + '/rest/v1/' + TABLE_NAME + '?id=eq.' + id, {
+            return fetch(SUPABASE_URL + '/rest/v1/' + TABLE_POTHOLES + '?id=eq.' + id, {
                 method: 'PATCH',
-                headers: {
-                    'apikey': SUPABASE_KEY,
-                    'Authorization': 'Bearer ' + SUPABASE_KEY,
-                    'Content-Type': 'application/json',
-                    'Prefer': 'return=representation'
-                },
+                headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
                 body: JSON.stringify({ confirmations: newCount })
             })
-            .then(function(response) {
-                if (!response.ok) throw new Error('Ошибка обновления: ' + response.status);
-                return response.json();
-            })
+            .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
             .then(function(data) { return data[0]; });
         }
 
         function deleteFromCloud(id) {
-            return fetch(SUPABASE_URL + '/rest/v1/' + TABLE_NAME + '?id=eq.' + id, {
+            return fetch(SUPABASE_URL + '/rest/v1/' + TABLE_POTHOLES + '?id=eq.' + id, {
                 method: 'DELETE',
-                headers: {
-                    'apikey': SUPABASE_KEY,
-                    'Authorization': 'Bearer ' + SUPABASE_KEY
-                }
+                headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+            });
+        }
+
+        function deleteSegmentFromCloud(id) {
+            return fetch(SUPABASE_URL + '/rest/v1/' + TABLE_SEGMENTS + '?id=eq.' + id, {
+                method: 'DELETE',
+                headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
             });
         }
 
         window.deletePothole = function(id) {
             if (!confirm('Удалить эту яму?')) return;
-            deleteFromCloud(id)
-                .then(function() {
-                    var index = potholes.findIndex(function(p) { return p.id === id; });
-                    if (index !== -1) {
-                        clusterGroup.removeLayer(potholes[index].marker);
-                        potholes.splice(index, 1);
-                    }
-                    updateCounter();
-                    showToast('🗑 Яма удалена');
-                })
-                .catch(function(error) {
-                    console.error(error);
-                    showToast('⚠️ Не удалось удалить');
-                });
+            deleteFromCloud(id).then(function() {
+                var idx = potholes.findIndex(function(p) { return p.id === id; });
+                if (idx !== -1) { clusterGroup.removeLayer(potholes[idx].marker); potholes.splice(idx, 1); }
+                updateCounter();
+                showToast('🗑 Яма удалена');
+            }).catch(function(e) { console.error(e); showToast('⚠️ Не удалось удалить'); });
+        };
+
+        window.deleteSegment = function(id) {
+            if (!confirm('Удалить этот участок?')) return;
+            deleteSegmentFromCloud(id).then(function() {
+                var idx = segments.findIndex(function(s) { return s.id === id; });
+                if (idx !== -1) { map.removeLayer(segments[idx].line); segments.splice(idx, 1); }
+                updateCounter();
+                showToast('🗑 Участок удалён');
+            }).catch(function(e) { console.error(e); showToast('⚠️ Не удалось удалить'); });
         };
 
         addBtn.addEventListener('click', function() {
+            if (segmentMode) cancelSegmentMode();
             addingMode = !addingMode;
             if (addingMode) {
                 addBtn.textContent = '✕ Отмена';
@@ -647,69 +653,121 @@
                 document.body.classList.add('map-adding');
                 map.flyTo(map.getCenter(), 18, { duration: 0.8 });
             } else {
-                addBtn.textContent = '+ Добавить яму';
+                addBtn.textContent = '+ Яма';
                 addBtn.style.background = 'linear-gradient(135deg, #6a5acd 0%, #483d8b 100%)';
                 hintEl.classList.add('hidden');
                 document.body.classList.remove('map-adding');
             }
         });
 
-        map.on('click', function(e) {
-            if (!addingMode) return;
-            document.body.classList.remove('map-adding');
-            if (draftMarker) map.removeLayer(draftMarker);
+        segmentBtn.addEventListener('click', function() {
+            if (addingMode) {
+                addingMode = false;
+                addBtn.textContent = '+ Яма';
+                addBtn.style.background = 'linear-gradient(135deg, #6a5acd 0%, #483d8b 100%)';
+                document.body.classList.remove('map-adding');
+            }
+            segmentMode = !segmentMode;
+            if (segmentMode) {
+                segmentBtn.textContent = '✕ Отмена';
+                segmentBtn.style.background = 'linear-gradient(135deg, #ff4757 0%, #c0392b 100%)';
+                hintEl.classList.remove('hidden');
+                hintEl.textContent = 'Ткните начало участка, затем конец';
+                segmentPoints = [];
+            } else {
+                cancelSegmentMode();
+            }
+        });
 
-            var lat = e.latlng.lat;
-            var lng = e.latlng.lng;
-
-            var draftIcon = L.divIcon({
-                className: '',
-                html: '<div class="draft-marker"></div>',
-                iconSize: [26, 26],
-                iconAnchor: [13, 13]
-            });
-
-            draftMarker = L.marker([lat, lng], {
-                icon: draftIcon,
-                draggable: true
-            }).addTo(map);
-
-            draftPanel.classList.add('show');
-
-            addingMode = false;
-            addBtn.textContent = '+ Добавить яму';
-            addBtn.style.background = 'linear-gradient(135deg, #6a5acd 0%, #483d8b 100%)';
+        function cancelSegmentMode() {
+            segmentMode = false;
+            segmentBtn.textContent = '🛣 Участок';
+            segmentBtn.style.background = 'linear-gradient(135deg, #e67e22 0%, #d35400 100%)';
             hintEl.classList.add('hidden');
+            if (segmentStart) { map.removeLayer(segmentStart); segmentStart = null; }
+            if (segmentEnd) { map.removeLayer(segmentEnd); segmentEnd = null; }
+            if (segmentLine) { map.removeLayer(segmentLine); segmentLine = null; }
+            segmentPoints = [];
+        }
+
+        map.on('click', function(e) {
+            if (addingMode) {
+                document.body.classList.remove('map-adding');
+                if (draftMarker) map.removeLayer(draftMarker);
+                var lat = e.latlng.lat;
+                var lng = e.latlng.lng;
+                var draftIcon = L.divIcon({ className: '', html: '<div class="draft-marker"></div>', iconSize: [26, 26], iconAnchor: [13, 13] });
+                draftMarker = L.marker([lat, lng], { icon: draftIcon, draggable: true }).addTo(map);
+                draftTitle.textContent = '📍 Уточните местоположение';
+                draftSubtitle.textContent = 'Перетащите маркер, увеличьте карту, потом сохраните';
+                draftPanel.classList.add('show');
+                addingMode = false;
+                addBtn.textContent = '+ Яма';
+                addBtn.style.background = 'linear-gradient(135deg, #6a5acd 0%, #483d8b 100%)';
+                hintEl.classList.add('hidden');
+                return;
+            }
+
+            if (segmentMode) {
+                var slat = e.latlng.lat;
+                var slng = e.latlng.lng;
+                var ptIcon = L.divIcon({ className: '', html: '<div class="segment-point"></div>', iconSize: [20, 20], iconAnchor: [10, 10] });
+                if (segmentPoints.length === 0) {
+                    segmentStart = L.marker([slat, slng], { icon: ptIcon }).addTo(map);
+                    segmentPoints.push([slat, slng]);
+                    hintEl.textContent = 'Теперь ткните конец участка';
+                } else {
+                    segmentEnd = L.marker([slat, slng], { icon: ptIcon }).addTo(map);
+                    segmentPoints.push([slat, slng]);
+                    if (segmentLine) map.removeLayer(segmentLine);
+                    segmentLine = L.polyline(segmentPoints, { color: '#e67e22', weight: 6, opacity: 0.8 }).addTo(map);
+                    hintEl.textContent = 'Нажмите «Сохранить» внизу';
+                    draftTitle.textContent = '🛣 Участок дороги';
+                    draftSubtitle.textContent = 'Проверьте линию, потом сохраните';
+                    draftPanel.classList.add('show');
+                    segmentMode = false;
+                    segmentBtn.textContent = '🛣 Участок';
+                    segmentBtn.style.background = 'linear-gradient(135deg, #e67e22 0%, #d35400 100%)';
+                }
+            }
         });
 
         draftCancel.addEventListener('click', function() {
-            if (draftMarker) {
-                map.removeLayer(draftMarker);
-                draftMarker = null;
-            }
+            if (draftMarker) { map.removeLayer(draftMarker); draftMarker = null; }
+            if (segmentStart) { map.removeLayer(segmentStart); segmentStart = null; }
+            if (segmentEnd) { map.removeLayer(segmentEnd); segmentEnd = null; }
+            if (segmentLine) { map.removeLayer(segmentLine); segmentLine = null; }
+            segmentPoints = [];
             draftPanel.classList.remove('show');
             document.body.classList.remove('map-adding');
             showToast('Отменено');
         });
 
         draftSave.addEventListener('click', function() {
-            if (!draftMarker) return;
-            var lat = draftMarker.getLatLng().lat;
-            var lng = draftMarker.getLatLng().lng;
-
-            var nearby = findNearbyPothole(lat, lng);
-
-            if (nearby) {
-                nearbyPotholeId = nearby.id;
-                var dist = Math.round(distanceMeters(lat, lng, nearby.lat, nearby.lng));
-                nearbyInfo.innerHTML =
-                    'Рядом (в ' + dist + ' м) уже есть яма:<br>' +
-                    '<b>' + nearby.description + '</b> (' + getSeverityName(nearby.severity) + ')<br><br>' +
-                    'Это та же яма или новая?';
-                nearbyOverlay.classList.add('show');
+            // Если это участок
+            if (segmentPoints.length >= 2) {
+                segmentInput.value = '';
+                segmentSeverity = 1;
+                segmentSeverityOptions.querySelectorAll('.severity-option').forEach(function(el, i) {
+                    el.classList.toggle('active', i === 0);
+                });
+                segmentModalOverlay.classList.add('show');
+                setTimeout(function() { segmentInput.focus(); }, 100);
                 return;
             }
 
+            // Если это яма
+            if (!draftMarker) return;
+            var lat = draftMarker.getLatLng().lat;
+            var lng = draftMarker.getLatLng().lng;
+            var nearby = findNearbyPothole(lat, lng);
+            if (nearby) {
+                nearbyPotholeId = nearby.id;
+                var dist = Math.round(distanceMeters(lat, lng, nearby.lat, nearby.lng));
+                nearbyInfo.innerHTML = 'Рядом (в ' + dist + ' м) уже есть яма:<br><b>' + nearby.description + '</b> (' + getSeverityName(nearby.severity) + ')<br><br>Это та же яма или новая?';
+                nearbyOverlay.classList.add('show');
+                return;
+            }
             openDescriptionModal(lat, lng);
         });
 
@@ -717,19 +775,12 @@
             if (!nearbyPotholeId) return;
             var pothole = potholes.find(function(p) { return p.id === nearbyPotholeId; });
             if (!pothole) { nearbyOverlay.classList.remove('show'); return; }
-
-            incrementConfirmations(pothole.id, pothole.confirmations)
-                .then(function(row) {
-                    pothole.confirmations = row.confirmations;
-                    refreshPopup(pothole);
-                    showToast('✅ Подтверждено! Теперь ' + row.confirmations + ' раз');
-                    closeDraftAndNearby();
-                })
-                .catch(function(error) {
-                    console.error(error);
-                    showToast('⚠️ Не удалось подтвердить');
-                    closeDraftAndNearby();
-                });
+            incrementConfirmations(pothole.id, pothole.confirmations).then(function(row) {
+                pothole.confirmations = row.confirmations;
+                refreshPopup(pothole);
+                showToast('✅ Подтверждено! Теперь ' + row.confirmations + ' раз');
+                closeDraftAndNearby();
+            }).catch(function(e) { console.error(e); showToast('⚠️ Не удалось подтвердить'); closeDraftAndNearby(); });
         });
 
         nearbyNew.addEventListener('click', function() {
@@ -740,15 +791,10 @@
             openDescriptionModal(lat, lng);
         });
 
-        nearbyCancel.addEventListener('click', function() {
-            nearbyOverlay.classList.remove('show');
-        });
+        nearbyCancel.addEventListener('click', function() { nearbyOverlay.classList.remove('show'); });
 
         function closeDraftAndNearby() {
-            if (draftMarker) {
-                map.removeLayer(draftMarker);
-                draftMarker = null;
-            }
+            if (draftMarker) { map.removeLayer(draftMarker); draftMarker = null; }
             draftPanel.classList.remove('show');
             nearbyOverlay.classList.remove('show');
             nearbyPotholeId = null;
@@ -758,14 +804,11 @@
         function openDescriptionModal(lat, lng) {
             modalInput.value = '';
             selectedSeverity = 1;
-            document.querySelectorAll('.severity-option').forEach(function(el) {
-                el.classList.remove('active');
+            severityOptions.querySelectorAll('.severity-option').forEach(function(el, i) {
+                el.classList.toggle('active', i === 0);
             });
-            document.querySelector('.severity-option[data-severity="1"]').classList.add('active');
-
             modalOverlay.classList.add('show');
             setTimeout(function() { modalInput.focus(); }, 100);
-
             window._draftCoords = { lat: lat, lng: lng };
         }
 
@@ -780,44 +823,45 @@
             finalizeDraft(window._draftCoords.lat, window._draftCoords.lng, 'Яма', selectedSeverity);
         });
 
-        modalInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') modalOk.click();
-        });
+        modalInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') modalOk.click(); });
 
         function finalizeDraft(lat, lng, description, severity) {
-            saveToCloud(lat, lng, description, severity)
-                .then(function(row) {
-                    if (draftMarker) {
-                        map.removeLayer(draftMarker);
-                        draftMarker = null;
-                    }
-                    draftPanel.classList.remove('show');
-                    document.body.classList.remove('map-adding');
-
-                    var marker = createMarker(row.lat, row.lng, row.description, row.id, row.severity, row.confirmations);
-                    potholes.push({
-                        id: row.id, lat: row.lat, lng: row.lng,
-                        description: row.description, severity: row.severity,
-                        confirmations: row.confirmations || 1,
-                        marker: marker
-                    });
-                    updateCounter();
-                    showToast('✅ Яма сохранена');
-                })
-                .catch(function(error) {
-                    console.error(error);
-                    showToast('⚠️ Не удалось сохранить');
-                });
+            saveToCloud(lat, lng, description, severity).then(function(row) {
+                if (draftMarker) { map.removeLayer(draftMarker); draftMarker = null; }
+                draftPanel.classList.remove('show');
+                document.body.classList.remove('map-adding');
+                var marker = createMarker(row.lat, row.lng, row.description, row.id, row.severity, row.confirmations);
+                potholes.push({ id: row.id, lat: row.lat, lng: row.lng, description: row.description, severity: row.severity, confirmations: row.confirmations || 1, marker: marker });
+                updateCounter();
+                showToast('✅ Яма сохранена');
+            }).catch(function(e) { console.error(e); showToast('⚠️ Не удалось сохранить'); });
         }
 
-        clearBtn.addEventListener('click', function() {
-            if (potholes.length === 0) { showToast('Карта уже пустая'); return; }
-            if (!confirm('Скрыть все ямы с этой карты?\n(В облаке они останутся)')) return;
-            clusterGroup.clearLayers();
-            potholes = [];
-            updateCounter();
-            showToast('Скрыто с карты');
+        // Участок — сохранение
+        segmentOk.addEventListener('click', function() {
+            var description = segmentInput.value.trim() || 'Убитый участок';
+            segmentModalOverlay.classList.remove('show');
+            saveSegment(segmentPoints, description, segmentSeverity);
         });
+
+        segmentSkip.addEventListener('click', function() {
+            segmentModalOverlay.classList.remove('show');
+            saveSegment(segmentPoints, 'Убитый участок', segmentSeverity);
+        });
+
+        function saveSegment(coords, description, severity) {
+            saveSegmentToCloud(coords, description, severity).then(function(row) {
+                if (segmentStart) { map.removeLayer(segmentStart); segmentStart = null; }
+                if (segmentEnd) { map.removeLayer(segmentEnd); segmentEnd = null; }
+                if (segmentLine) { map.removeLayer(segmentLine); segmentLine = null; }
+                segmentPoints = [];
+                draftPanel.classList.remove('show');
+                var line = createSegmentLine(row.coords, row.id, row.severity, row.description);
+                segments.push({ id: row.id, coords: row.coords, severity: row.severity, description: row.description, line: line });
+                updateCounter();
+                showToast('✅ Участок сохранён');
+            }).catch(function(e) { console.error(e); showToast('⚠️ Не удалось сохранить участок'); });
+        }
 
         loadFromCloud();
         setTimeout(function() { hintEl.classList.add('hidden'); }, 5000);
