@@ -93,6 +93,9 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,Blink
 .modal-input{width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:12px 14px;color:#fff;font-size:15px;outline:none;margin-bottom:14px}
 .modal-input::placeholder{color:#6a6088}
 .modal-input:focus{border-color:rgba(160,152,192,.6)}
+.modal-textarea{width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:12px 14px;color:#fff;font-size:15px;outline:none;margin-bottom:14px;font-family:inherit;resize:vertical;min-height:100px}
+.modal-textarea::placeholder{color:#6a6088}
+.modal-textarea:focus{border-color:rgba(160,152,192,.6)}
 .severity-label{font-size:13px;color:#a098c0;margin-bottom:8px;font-weight:600}
 .severity-options{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
 .severity-option{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.05);border:2px solid transparent;border-radius:14px;padding:12px 14px;cursor:pointer;transition:all .2s}
@@ -238,6 +241,18 @@ body.map-adding .leaflet-marker-icon,body.map-adding .leaflet-marker-shadow{poin
 </div>
 </div>
 </div>
+<!-- Модалка комментария -->
+<div class="modal-overlay" id="commentModalOverlay">
+<div class="modal">
+<div class="modal-title">💬 Комментарий</div>
+<div class="nearby-info" id="commentInfo" style="display:none;"></div>
+<textarea class="modal-textarea" id="commentInput" placeholder="Например: объезжайте, тут убито" maxlength="300"></textarea>
+<div class="modal-buttons">
+<button class="modal-btn-skip" id="commentCancel">Отмена</button>
+<button class="modal-btn-ok" id="commentOk">Сохранить</button>
+</div>
+</div>
+</div>
 <div class="modal-overlay" id="searchModalOverlay">
 <div class="modal">
 <div class="modal-title">🔍 Найдено несколько:</div>
@@ -322,7 +337,8 @@ var myLocationMarker=null,myLocationCircle=null,searchMarker=null;
 var selectedSeverity=1,segmentSeverity=1;
 var nearbyPotholeId=null;
 var winterDraftCoords=null;
-var deleteType=null, deleteId=null;
+var deleteType=null,deleteId=null;
+var commentType=null,commentId=null;
 function $(id){return document.getElementById(id)}
 var addBtn=$('addBtn'),segmentBtn=$('segmentBtn'),locateBtn=$('locateBtn'),shareBtn=$('shareBtn'),statsBtn=$('statsBtn');
 var snowBtn=$('snowBtn'),iceBtn=$('iceBtn'),slushBtn=$('slushBtn'),blockedBtn=$('blockedBtn');
@@ -334,6 +350,7 @@ var draftPanel=$('draftPanel'),draftTitle=$('draftTitle'),draftSubtitle=$('draft
 var modalOverlay=$('modalOverlay'),modalInput=$('modalInput'),modalOk=$('modalOk'),modalSkip=$('modalSkip'),severityOptions=$('severityOptions'),outsideHint=$('outsideHint');
 var winterModalOverlay=$('winterModalOverlay'),winterInput=$('winterInput'),winterOk=$('winterOk'),winterSkip=$('winterSkip'),winterModalTitle=$('winterModalTitle'),outsideWinterHint=$('outsideWinterHint');
 var segmentModalOverlay=$('segmentModalOverlay'),segmentInput=$('segmentInput'),segmentOk=$('segmentOk'),segmentSkip=$('segmentSkip'),segmentSeverityOptions=$('segmentSeverityOptions');
+var commentModalOverlay=$('commentModalOverlay'),commentInput=$('commentInput'),commentOk=$('commentOk'),commentCancel=$('commentCancel'),commentInfo=$('commentInfo');
 var searchModalOverlay=$('searchModalOverlay'),searchResults=$('searchResults'),searchCancel=$('searchCancel');
 var nearbyOverlay=$('nearbyOverlay'),nearbyInfo=$('nearbyInfo'),nearbyConfirm=$('nearbyConfirm'),nearbyNew=$('nearbyNew'),nearbyCancel=$('nearbyCancel');
 var deleteModalOverlay=$('deleteModalOverlay'),deleteModalTitle=$('deleteModalTitle'),deleteModalText=$('deleteModalText'),deleteConfirm=$('deleteConfirm'),deleteCancel=$('deleteCancel');
@@ -366,6 +383,7 @@ function findNearbyPothole(lat,lng){for(var i=0;i<potholes.length;i++){if(pothol
 function setSeason(season){currentSeason=season;if(season==='summer'){seasonSummer.classList.add('active');seasonWinter.classList.remove('active');counterSummer.style.display='flex';counterWinter.style.display='none';buttonsSummer.style.display='flex';buttonsWinter.style.display='none';buttonsWinter2.style.display='none';map.addLayer(clusterGroup);segments.forEach(function(s){if(s.line)map.addLayer(s.line)});map.removeLayer(winterGroup);hintEl.textContent='Нажми «+ Яма» и ткни в карту';showToast('🌞 Летний режим')}else{seasonWinter.classList.add('active');seasonSummer.classList.remove('active');counterSummer.style.display='none';counterWinter.style.display='flex';buttonsSummer.style.display='none';buttonsWinter.style.display='flex';buttonsWinter2.style.display='flex';map.removeLayer(clusterGroup);segments.forEach(function(s){if(s.line)map.removeLayer(s.line)});map.addLayer(winterGroup);hintEl.textContent='Выбери тип и ткни в карту';showToast('❄️ Зимний режим')}}
 seasonSummer.addEventListener('click',function(){setSeason('summer')});
 seasonWinter.addEventListener('click',function(){setSeason('winter')});
+// ===== СТАТИСТИКА =====
 statsBtn.addEventListener('click',function(){renderStats();statsModalOverlay.classList.add('show')});
 statsClose.addEventListener('click',function(){statsModalOverlay.classList.remove('show')});
 function renderStats(){
@@ -386,6 +404,7 @@ var snow=winActive.filter(function(w){return w.type==='snow'}).length;
 var ice=winActive.filter(function(w){return w.type==='ice'}).length;
 var slush=winActive.filter(function(w){return w.type==='slush'}).length;
 var blocked=winActive.filter(function(w){return w.type==='blocked'}).length;
+var commentsCount=potholes.filter(function(p){return p.comment}).length+winterReports.filter(function(w){return w.comment}).length+segments.filter(function(s){return s.comment}).length;
 var html='';
 html+='<div class="stats-section">';
 html+='<div class="stats-section-title">🏙 Отрадный</div>';
@@ -394,6 +413,7 @@ if(active.length>0){html+='<div class="stats-sub">По уровням:</div>';if
 if(fixed.length>0)html+='<div class="stats-line"><span>✅ Заделано</span><b>'+fixed.length+'</b></div>';
 html+='<div class="stats-line"><span>🛣 Участки (активных)</span><b>'+segActive.length+'</b></div>';
 if(segFixed.length>0)html+='<div class="stats-line"><span>✅ Заделано участков</span><b>'+segFixed.length+'</b></div>';
+if(commentsCount>0)html+='<div class="stats-line"><span>💬 Комментариев</span><b>'+commentsCount+'</b></div>';
 html+='</div>';
 if(winCity.length>0){html+='<div class="stats-section">';html+='<div class="stats-section-title">❄️ Зимние (в городе)</div>';if(snow>0)html+='<div class="stats-line"><span>❄️ Снег</span><b>'+snow+'</b></div>';if(ice>0)html+='<div class="stats-line"><span>⛸️ Гололёд</span><b>'+ice+'</b></div>';if(slush>0)html+='<div class="stats-line"><span>🫠 Каша</span><b>'+slush+'</b></div>';if(blocked>0)html+='<div class="stats-line"><span>🚫 Завал</span><b>'+blocked+'</b></div>';if(winFixed.length>0)html+='<div class="stats-line"><span>🚜 Исполнено</span><b>'+winFixed.length+'</b></div>';html+='</div>';}
 if(outCity.length>0||winOut.length>0){html+='<div class="stats-section">';html+='<div class="stats-section-title">🌄 Окрестности</div>';if(outCity.length>0)html+='<div class="stats-line"><span>🕳 Ямы</span><b>'+outCity.length+'</b></div>';if(winOut.length>0)html+='<div class="stats-line"><span>❄️ Зимние</span><b>'+winOut.length+'</b></div>';html+='<div class="stats-sub">Не входит в основную статистику</div>';html+='</div>';}
@@ -404,23 +424,60 @@ html+='<div class="stats-line"><span>Решено</span><b style="font-size:18px
 html+='</div>';
 statsContent.innerHTML=html;
 }
+// ===== КОММЕНТАРИИ =====
+window.openComment=function(type,id){
+commentType=type;commentId=id;
+var item=null;
+if(type==='pothole')item=potholes.find(function(x){return x.id===id});
+else if(type==='segment')item=segments.find(function(x){return x.id===id});
+else item=winterReports.find(function(x){return x.id===id});
+if(!item)return;
+commentInput.value=item.comment||'';
+commentInfo.style.display='none';
+commentModalOverlay.classList.add('show');
+setTimeout(function(){commentInput.focus()},100);
+};
+commentCancel.addEventListener('click',function(){commentModalOverlay.classList.remove('show');commentType=null;commentId=null});
+commentOk.addEventListener('click',function(){
+var text=commentInput.value.trim();
+if(commentType&&commentId)saveComment(commentType,commentId,text);
+commentModalOverlay.classList.remove('show');
+commentType=null;commentId=null;
+});
+function saveComment(type,id,text){
+var table=type==='pothole'?TABLE_POTHOLES:(type==='segment'?TABLE_SEGMENTS:TABLE_WINTER);
+fetch(SUPABASE_URL+'/rest/v1/'+table+'?id=eq.'+id,{method:'PATCH',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify({comment:text})})
+.then(function(r){if(!r.ok)throw new Error(r.status);return r.json()})
+.then(function(data){
+if(type==='pothole'){var p=potholes.find(function(x){return x.id===id});if(p){p.comment=text;p.marker._popupData.comment=text;p.marker.setPopupContent(makePopupContent(p.marker._popupData))}}
+else if(type==='segment'){var s=segments.find(function(x){return x.id===id});if(s){s.comment=text;s.line._segmentData.comment=text;s.line.setPopupContent(makeSegmentPopup(s.line._segmentData))}}
+else{var w=winterReports.find(function(x){return x.id===id});if(w){w.comment=text;w.marker._winterData.comment=text;w.marker.setPopupContent(makeWinterPopup(w.marker._winterData))}}
+showToast('💬 Комментарий сохранён');
+}).catch(function(e){console.error(e);showToast('⚠️ Не удалось сохранить')});
+}
+// ===== SHARE =====
 shareBtn.addEventListener('click',function(){shareModalOverlay.classList.add('show')});
 shareCancel.addEventListener('click',function(){shareModalOverlay.classList.remove('show')});
 window.shareVia=function(service){var text=encodeURIComponent(SHARE_TEXT);var url=encodeURIComponent(SHARE_URL);var link='';if(service==='whatsapp')link='https://wa.me/?text='+text+'%20'+url;else if(service==='telegram')link='https://t.me/share/url?url='+url+'&text='+text;else if(service==='vk')link='https://vk.com/share.php?url='+url+'&title='+text;else if(service==='sms')link='sms:?body='+text+'%20'+url;else if(service==='email')link='mailto:?subject='+encodeURIComponent('Карта ям Отрадного')+'&body='+text+'%20'+url;if(link)window.open(link,'_blank');shareModalOverlay.classList.remove('show')};
 window.copyLink=function(){var fullText=SHARE_TEXT+'\n'+SHARE_URL;if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(fullText).then(function(){showToast('✅ Ссылка скопирована');shareModalOverlay.classList.remove('show')}).catch(function(){fallbackCopy(fullText)})}else{fallbackCopy(fullText)}};
 function fallbackCopy(text){var ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');showToast('✅ Ссылка скопирована')}catch(e){showToast('⚠️ Не удалось скопировать')}document.body.removeChild(ta);shareModalOverlay.classList.remove('show')}
+// ===== УДАЛЕНИЕ =====
 window.askDelete=function(type,id,title){deleteType=type;deleteId=id;deleteModalTitle.textContent='🗑 '+title;deleteModalText.textContent='Это действие нельзя отменить.';deleteModalOverlay.classList.add('show')};
 deleteCancel.addEventListener('click',function(){deleteModalOverlay.classList.remove('show');deleteType=null;deleteId=null});
 deleteConfirm.addEventListener('click',function(){var type=deleteType,id=deleteId;deleteModalOverlay.classList.remove('show');deleteType=null;deleteId=null;if(type==='pothole')reallyDeletePothole(id);else if(type==='segment')reallyDeleteSegment(id);else if(type==='winter')reallyDeleteWinter(id)});
+// ===== СЕВЕРИТИ =====
 severityOptions.addEventListener('click',function(e){var o=e.target.closest('.severity-option');if(!o)return;severityOptions.querySelectorAll('.severity-option').forEach(function(el){el.classList.remove('active')});o.classList.add('active');selectedSeverity=parseInt(o.getAttribute('data-severity'))});
 segmentSeverityOptions.addEventListener('click',function(e){var o=e.target.closest('.severity-option');if(!o)return;segmentSeverityOptions.querySelectorAll('.severity-option').forEach(function(el){el.classList.remove('active')});o.classList.add('active');segmentSeverity=parseInt(o.getAttribute('data-severity'))});
+// ===== ГЕОЛОКАЦИЯ =====
 locateBtn.addEventListener('click',function(){if(!navigator.geolocation){showToast('⚠️ Геолокация не поддерживается');return}showToast('📍 Определяю...');navigator.geolocation.getCurrentPosition(function(pos){var lat=pos.coords.latitude,lng=pos.coords.longitude,acc=pos.coords.accuracy;if(myLocationMarker)map.removeLayer(myLocationMarker);if(myLocationCircle)map.removeLayer(myLocationCircle);myLocationMarker=L.marker([lat,lng],{icon:L.divIcon({className:'',html:'<div class="my-location-marker"></div>',iconSize:[24,24],iconAnchor:[12,24]})}).addTo(map);myLocationCircle=L.circle([lat,lng],{radius:acc,color:'#4285f4',fillColor:'#4285f4',fillOpacity:.15,weight:1}).addTo(map);map.flyTo([lat,lng],17,{duration:1.5});showToast('📍 Найдено! ±'+Math.round(acc)+' м')},function(err){var m='⚠️ Ошибка геолокации';if(err.code===1)m='⚠️ Разрешите доступ';if(err.code===2)m='⚠️ Включите GPS';if(err.code===3)m='⚠️ Превышено время';showToast(m)},{enableHighAccuracy:true,timeout:10000,maximumAge:0})});
+// ===== ПОИСК =====
 function searchAddress(){var q=searchInput.value.trim();if(!q){showToast('⚠️ Введите адрес');return}if(searchMarker)map.removeLayer(searchMarker);showToast('🔍 Ищу...');fetch('https://nominatim.openstreetmap.org/search?format=json&limit=10&addressdetails=1&q='+encodeURIComponent(q+CITY_SUFFIX),{headers:{'Accept-Language':'ru'}}).then(function(r){return r.json()}).then(function(data){if(data.length===0){showToast('⚠️ Ничего не найдено');return}if(data.length===1){goToResult(data[0]);return}showSearchResults(data)}).catch(function(e){console.error(e);showToast('⚠️ Ошибка поиска')})}
 function showSearchResults(results){searchResults.innerHTML='';results.forEach(function(item){var p=item.display_name.split(',');var d=document.createElement('div');d.className='search-result-item';d.innerHTML='<div class="search-result-name">📍 '+p[0]+'</div><div class="search-result-address">'+p.slice(1,3).join(',').trim()+'</div><div class="search-result-full">'+item.display_name+'</div>';d.addEventListener('click',function(){searchModalOverlay.classList.remove('show');goToResult(item)});searchResults.appendChild(d)});searchModalOverlay.classList.add('show')}
 function goToResult(item){var lat=parseFloat(item.lat),lng=parseFloat(item.lon);searchMarker=L.marker([lat,lng],{icon:L.divIcon({className:'',html:'<div style="background:#4285f4;border:3px solid #fff;border-radius:50%;width:18px;height:18px;box-shadow:0 0 15px rgba(66,133,244,.8);"></div>',iconSize:[18,18],iconAnchor:[9,9]})}).addTo(map);searchMarker.bindPopup('<b>'+item.display_name+'</b>').openPopup();map.flyTo([lat,lng],17,{duration:1.5});showToast('✅ '+item.display_name.split(',')[0])}
 searchBtn.addEventListener('click',searchAddress);
 searchInput.addEventListener('keypress',function(e){if(e.key==='Enter')searchAddress()});
 searchCancel.addEventListener('click',function(){searchModalOverlay.classList.remove('show')});
+// ===== ИКОНКИ =====
 function getIconForSeverity(s,outside){var cls='pothole-marker ';var sz,emoji='';if(s===1){cls+='pothole-minor';sz=16}else if(s===2){cls+='pothole-medium';sz=22}else{cls+='pothole-major';sz=28;emoji='💥'}if(outside)cls+=' pothole-outside';return L.divIcon({className:'',html:'<div class="'+cls+'">'+emoji+'</div>',iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]})}
 function getIconForPothole(p){var out=!isInCity(p.lat,p.lng);if(p.status==='fixed'){return L.divIcon({className:'',html:'<div class="pothole-marker pothole-fixed'+(out?' pothole-outside':'')+'">✅</div>',iconSize:[24,24],iconAnchor:[12,12]})}return getIconForSeverity(p.severity,out)}
 function getWinterIcon(w){var colors={snow:{bg:'#a8d8ff',border:'#4a90e2',emoji:'❄️'},ice:{bg:'#3a2e6e',border:'#1a1440',emoji:'⛸️'},slush:{bg:'#8d6e63',border:'#4e342e',emoji:'🫠'},blocked:{bg:'#e74c3c',border:'#7b241c',emoji:'🚫'}};var c=colors[w.type]||colors.snow;if(w.status==='fixed'){c={bg:'#2ecc71',border:'#27ae60',emoji:'🚜'}}var out=!isInCity(w.lat,w.lng);var extra=out?'winter-outside':'';return L.divIcon({className:'',html:'<div class="winter-marker '+extra+'" style="'+(out?'':'background:'+c.bg+';border-color:'+c.border+';')+'">'+c.emoji+'</div>',iconSize:[32,32],iconAnchor:[16,16]})}
@@ -428,16 +485,44 @@ function getSeverityName(s){if(s===1)return'🟡 Мелкая';if(s===2)return'�
 function getSegmentColor(s){if(s===1)return'#ffe066';if(s===2)return'#ff9f43';return'#ff4757'}
 function getWinterName(t){if(t==='snow')return'❄️ Снег';if(t==='ice')return'⛸️ Гололёд';if(t==='blocked')return'🚫 Завал';return'🫠 Каша'}
 function getZoneName(lat,lng){return isInCity(lat,lng)?'🏙 Отрадный':'🌄 Окрестности'}
+function escapeHtml(s){if(!s)return'';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+// ===== МАРКЕРЫ =====
 function createMarker(row){var m=L.marker([row.lat,row.lng],{icon:getIconForPothole(row)});m._popupData=row;m.bindPopup(makePopupContent(row));clusterGroup.addLayer(m);return m}
-function makePopupContent(d){var c=d.confirmations>1?'<div style="font-size:11px;color:#ffa502;margin-top:4px;">👥 Подтверждено: '+d.confirmations+' раз</div>':'';var fInfo='';var fBtn='';if(d.status==='fixed'){fInfo='<div style="font-size:11px;color:#2ecc71;margin-top:4px;">✅ Заделано '+(d.fixed_at?formatDate(d.fixed_at):'')+'</div>'}else{fBtn='<button onclick="markFixed(\'pothole\','+d.id+')" style="margin-top:8px;margin-right:4px;background:#2ecc71;color:white;border:none;padding:6px 12px;border-radius:15px;font-size:12px;cursor:pointer;">✅ Заделано</button>'}return'<div style="min-width:180px;"><div style="font-size:11px;color:#888;margin-bottom:4px;">'+getSeverityName(d.severity)+' · '+getZoneName(d.lat,d.lng)+'</div><b>'+d.description+'</b>'+c+fInfo+'<br><small style="color:#888;">'+d.lat.toFixed(5)+', '+d.lng.toFixed(5)+'</small><br>'+fBtn+'<button onclick="askDelete(\'pothole\','+d.id+',\'Удалить яму?\')" style="margin-top:8px;background:#ff4757;color:white;border:none;padding:6px 12px;border-radius:15px;font-size:12px;cursor:pointer;">🗑 Удалить</button></div>'}
+function makePopupContent(d){
+var c=d.confirmations>1?'<div style="font-size:11px;color:#ffa502;margin-top:4px;">👥 Подтверждено: '+d.confirmations+' раз</div>':'';
+var fInfo='';var fBtn='';
+if(d.status==='fixed'){fInfo='<div style="font-size:11px;color:#2ecc71;margin-top:4px;">✅ Заделано '+(d.fixed_at?formatDate(d.fixed_at):'')+'</div>';}
+else{fBtn='<button onclick="markFixed(\'pothole\','+d.id+')" style="margin-top:8px;margin-right:4px;background:#2ecc71;color:white;border:none;padding:6px 12px;border-radius:15px;font-size:12px;cursor:pointer;">✅ Заделано</button>';}
+var commentBlock='';
+if(d.comment){commentBlock='<div style="background:rgba(106,90,205,.15);border-left:3px solid #6a5acd;padding:8px 10px;margin-top:8px;border-radius:8px;font-size:12px;color:#d0c8e8;line-height:1.4;">💬 '+escapeHtml(d.comment)+'</div>';}
+var commentBtn='<button onclick="openComment(\'pothole\','+d.id+')" style="margin-top:8px;margin-right:4px;background:#6a5acd;color:white;border:none;padding:6px 12px;border-radius:15px;font-size:12px;cursor:pointer;">💬 '+(d.comment?'Изменить':'Комментарий')+'</button>';
+return'<div style="min-width:180px;"><div style="font-size:11px;color:#888;margin-bottom:4px;">'+getSeverityName(d.severity)+' · '+getZoneName(d.lat,d.lng)+'</div><b>'+escapeHtml(d.description)+'</b>'+c+fInfo+commentBlock+'<br><small style="color:#888;">'+d.lat.toFixed(5)+', '+d.lng.toFixed(5)+'</small><br>'+fBtn+commentBtn+'<button onclick="askDelete(\'pothole\','+d.id+',\'Удалить яму?\')" style="margin-top:8px;background:#ff4757;color:white;border:none;padding:6px 12px;border-radius:15px;font-size:12px;cursor:pointer;">🗑 Удалить</button></div>'}
 function createSegmentLine(row){var latlngs=row.coords.map(function(c){return[c[0],c[1]]});var mid=row.coords[Math.floor(row.coords.length/2)];var out=!isInCity(mid[0],mid[1]);var color=row.status==='fixed'?'#2ecc71':(out?'#999':getSegmentColor(row.severity));var line=L.polyline(latlngs,{color:color,weight:out?4:6,opacity:out?.5:.8,lineCap:'round',dashArray:out?'10,10':null});line._segmentData=row;line.bindPopup(makeSegmentPopup(row));if(currentSeason==='summer')line.addTo(map);return line}
-function makeSegmentPopup(d){var len=0;for(var i=1;i<d.coords.length;i++)len+=distanceMeters(d.coords[i-1][0],d.coords[i-1][1],d.coords[i][0],d.coords[i][1]);var mid=d.coords[Math.floor(d.coords.length/2)];var fInfo='';var fBtn='';if(d.status==='fixed'){fInfo='<div style="font-size:11px;color:#2ecc71;margin-top:4px;">✅ Заделано '+(d.fixed_at?formatDate(d.fixed_at):'')+'</div>'}else{fBtn='<button onclick="markFixed(\'segment\','+d.id+')" style="margin-top:8px;margin-right:4px;background:#2ecc71;color:white;border:none;padding:6px 12px;border-radius:15px;font-size:12px;cursor:pointer;">✅ Заделано</button>'}return'<div style="min-width:180px;"><div style="font-size:11px;color:#e67e22;margin-bottom:4px;">🛣 УЧАСТОК · '+getSeverityName(d.severity)+' · '+getZoneName(mid[0],mid[1])+'</div><b>'+(d.description||'Убитый участок')+'</b>'+fInfo+'<br><small style="color:#888;">Длина: '+Math.round(len)+' м</small><br>'+fBtn+'<button onclick="askDelete(\'segment\','+d.id+',\'Удалить участок?\')" style="margin-top:8px;background:#ff4757;color:white;border:none;padding:6px 12px;border-radius:15px;font-size:12px;cursor:pointer;">🗑 Удалить</button></div>'}
+function makeSegmentPopup(d){
+var len=0;for(var i=1;i<d.coords.length;i++)len+=distanceMeters(d.coords[i-1][0],d.coords[i-1][1],d.coords[i][0],d.coords[i][1]);
+var mid=d.coords[Math.floor(d.coords.length/2)];
+var fInfo='';var fBtn='';
+if(d.status==='fixed'){fInfo='<div style="font-size:11px;color:#2ecc71;margin-top:4px;">✅ Заделано '+(d.fixed_at?formatDate(d.fixed_at):'')+'</div>';}
+else{fBtn='<button onclick="markFixed(\'segment\','+d.id+')" style="margin-top:8px;margin-right:4px;background:#2ecc71;color:white;border:none;padding:6px 12px;border-radius:15px;font-size:12px;cursor:pointer;">✅ Заделано</button>';}
+var commentBlock='';
+if(d.comment){commentBlock='<div style="background:rgba(106,90,205,.15);border-left:3px solid #6a5acd;padding:8px 10px;margin-top:8px;border-radius:8px;font-size:12px;color:#d0c8e8;line-height:1.4;">💬 '+escapeHtml(d.comment)+'</div>';}
+var commentBtn='<button onclick="openComment(\'segment\','+d.id+')" style="margin-top:8px;margin-right:4px;background:#6a5acd;color:white;border:none;padding:6px 12px;border-radius:15px;font-size:12px;cursor:pointer;">💬 '+(d.comment?'Изменить':'Комментарий')+'</button>';
+return'<div style="min-width:180px;"><div style="font-size:11px;color:#e67e22;margin-bottom:4px;">🛣 УЧАСТОК · '+getSeverityName(d.severity)+' · '+getZoneName(mid[0],mid[1])+'</div><b>'+escapeHtml(d.description||'Убитый участок')+'</b>'+fInfo+commentBlock+'<br><small style="color:#888;">Длина: '+Math.round(len)+' м</small><br>'+fBtn+commentBtn+'<button onclick="askDelete(\'segment\','+d.id+',\'Удалить участок?\')" style="margin-top:8px;background:#ff4757;color:white;border:none;padding:6px 12px;border-radius:15px;font-size:12px;cursor:pointer;">🗑 Удалить</button></div>'}
 function createWinterMarker(row){var m=L.marker([row.lat,row.lng],{icon:getWinterIcon(row)});m._winterData=row;m.bindPopup(makeWinterPopup(row));winterGroup.addLayer(m);return m}
-function makeWinterPopup(d){var name=getWinterName(d.type);var fInfo='';var fBtn='';if(d.status==='fixed'){fInfo='<div style="font-size:11px;color:#2ecc71;margin-top:4px;">🚜 Исполнено '+(d.fixed_at?formatDate(d.fixed_at):'')+'</div>'}else{fBtn='<button onclick="markFixed(\'winter\','+d.id+')" style="margin-top:8px;margin-right:4px;background:#2ecc71;color:white;border:none;padding:6px 12px;border-radius:15px;font-size:12px;cursor:pointer;">🚜 Исполнено</button>'}return'<div style="min-width:160px;"><div style="font-size:11px;color:#8a80a8;margin-bottom:4px;">'+name+' · '+getZoneName(d.lat,d.lng)+'</div><b>'+(d.description||'Без описания')+'</b>'+fInfo+'<br><small style="color:#888;">'+d.lat.toFixed(5)+', '+d.lng.toFixed(5)+'</small><br>'+fBtn+'<button onclick="askDelete(\'winter\','+d.id+',\'Удалить отметку?\')" style="margin-top:8px;background:#ff4757;color:white;border:none;padding:6px 12px;border-radius:15px;font-size:12px;cursor:pointer;">🗑 Удалить</button></div>'}
+function makeWinterPopup(d){
+var name=getWinterName(d.type);var fInfo='';var fBtn='';
+if(d.status==='fixed'){fInfo='<div style="font-size:11px;color:#2ecc71;margin-top:4px;">🚜 Исполнено '+(d.fixed_at?formatDate(d.fixed_at):'')+'</div>';}
+else{fBtn='<button onclick="markFixed(\'winter\','+d.id+')" style="margin-top:8px;margin-right:4px;background:#2ecc71;color:white;border:none;padding:6px 12px;border-radius:15px;font-size:12px;cursor:pointer;">🚜 Исполнено</button>';}
+var commentBlock='';
+if(d.comment){commentBlock='<div style="background:rgba(106,90,205,.15);border-left:3px solid #6a5acd;padding:8px 10px;margin-top:8px;border-radius:8px;font-size:12px;color:#d0c8e8;line-height:1.4;">💬 '+escapeHtml(d.comment)+'</div>';}
+var commentBtn='<button onclick="openComment(\'winter\','+d.id+')" style="margin-top:8px;margin-right:4px;background:#6a5acd;color:white;border:none;padding:6px 12px;border-radius:15px;font-size:12px;cursor:pointer;">💬 '+(d.comment?'Изменить':'Комментарий')+'</button>';
+return'<div style="min-width:160px;"><div style="font-size:11px;color:#8a80a8;margin-bottom:4px;">'+name+' · '+getZoneName(d.lat,d.lng)+'</div><b>'+escapeHtml(d.description||'Без описания')+'</b>'+fInfo+commentBlock+'<br><small style="color:#888;">'+d.lat.toFixed(5)+', '+d.lng.toFixed(5)+'</small><br>'+fBtn+commentBtn+'<button onclick="askDelete(\'winter\','+d.id+',\'Удалить отметку?\')" style="margin-top:8px;background:#ff4757;color:white;border:none;padding:6px 12px;border-radius:15px;font-size:12px;cursor:pointer;">🗑 Удалить</button></div>'}
+// ===== ЗАГРУЗКА =====
 function loadAll(){
-fetch(SUPABASE_URL+'/rest/v1/'+TABLE_POTHOLES+'?select=*&order=created_at.desc',{headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}}).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(data){clusterGroup.clearLayers();potholes=[];data.forEach(function(row){row.confirmations=row.confirmations||1;row.status=row.status||'active';var m=createMarker(row);potholes.push({id:row.id,lat:row.lat,lng:row.lng,description:row.description,severity:row.severity,confirmations:row.confirmations,status:row.status,fixed_at:row.fixed_at,marker:m})});updateCounter();setOnline(true)}).catch(function(e){console.error(e);setOnline(false)});
-fetch(SUPABASE_URL+'/rest/v1/'+TABLE_SEGMENTS+'?select=*&order=created_at.desc',{headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}}).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(data){segments.forEach(function(s){if(s.line)map.removeLayer(s.line)});segments=[];data.forEach(function(row){row.status=row.status||'active';var line=createSegmentLine(row);segments.push({id:row.id,coords:row.coords,severity:row.severity,description:row.description,status:row.status,fixed_at:row.fixed_at,line:line})});updateCounter()}).catch(function(e){console.error('Segments:',e)});
-fetch(SUPABASE_URL+'/rest/v1/'+TABLE_WINTER+'?select=*&order=created_at.desc',{headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}}).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(data){winterGroup.clearLayers();winterReports=[];data.forEach(function(row){row.status=row.status||'active';var m=createWinterMarker(row);winterReports.push({id:row.id,lat:row.lat,lng:row.lng,type:row.type,description:row.description,status:row.status,fixed_at:row.fixed_at,marker:m})});updateCounter();showToast('☁️ Загружено: '+potholes.length+' ям, '+winterReports.length+' зимних')}).catch(function(e){console.error('Winter:',e)})}
+fetch(SUPABASE_URL+'/rest/v1/'+TABLE_POTHOLES+'?select=*&order=created_at.desc',{headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}}).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(data){clusterGroup.clearLayers();potholes=[];data.forEach(function(row){row.confirmations=row.confirmations||1;row.status=row.status||'active';var m=createMarker(row);potholes.push({id:row.id,lat:row.lat,lng:row.lng,description:row.description,severity:row.severity,confirmations:row.confirmations,status:row.status,fixed_at:row.fixed_at,comment:row.comment||'',marker:m})});updateCounter();setOnline(true)}).catch(function(e){console.error(e);setOnline(false)});
+fetch(SUPABASE_URL+'/rest/v1/'+TABLE_SEGMENTS+'?select=*&order=created_at.desc',{headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}}).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(data){segments.forEach(function(s){if(s.line)map.removeLayer(s.line)});segments=[];data.forEach(function(row){row.status=row.status||'active';var line=createSegmentLine(row);segments.push({id:row.id,coords:row.coords,severity:row.severity,description:row.description,status:row.status,fixed_at:row.fixed_at,comment:row.comment||'',line:line})});updateCounter()}).catch(function(e){console.error('Segments:',e)});
+fetch(SUPABASE_URL+'/rest/v1/'+TABLE_WINTER+'?select=*&order=created_at.desc',{headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}}).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(data){winterGroup.clearLayers();winterReports=[];data.forEach(function(row){row.status=row.status||'active';var m=createWinterMarker(row);winterReports.push({id:row.id,lat:row.lat,lng:row.lng,type:row.type,description:row.description,status:row.status,fixed_at:row.fixed_at,comment:row.comment||'',marker:m})});updateCounter();showToast('☁️ Загружено: '+potholes.length+' ям, '+winterReports.length+' зимних')}).catch(function(e){console.error('Winter:',e)})}
+// ===== СОХРАНЕНИЕ =====
 function savePothole(lat,lng,description,severity){return fetch(SUPABASE_URL+'/rest/v1/'+TABLE_POTHOLES,{method:'POST',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify({lat:lat,lng:lng,description:description,severity:severity})}).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(d){return d[0]})}
 function saveSegment(coords,description,severity){return fetch(SUPABASE_URL+'/rest/v1/'+TABLE_SEGMENTS,{method:'POST',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify({coords:coords,description:description,severity:severity})}).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(d){return d[0]})}
 function saveWinter(lat,lng,type,description){return fetch(SUPABASE_URL+'/rest/v1/'+TABLE_WINTER,{method:'POST',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify({lat:lat,lng:lng,type:type,description:description})}).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(d){return d[0]})}
@@ -449,6 +534,7 @@ function reallyDeletePothole(id){deletePotholeCloud(id).then(function(){var i=po
 function reallyDeleteSegment(id){deleteSegmentCloud(id).then(function(){var i=segments.findIndex(function(s){return s.id===id});if(i!==-1){map.removeLayer(segments[i].line);segments.splice(i,1)}updateCounter();showToast('🗑 Участок удалён')}).catch(function(e){console.error(e);showToast('⚠️ Не удалось')})}
 function reallyDeleteWinter(id){deleteWinterCloud(id).then(function(){var i=winterReports.findIndex(function(w){return w.id===id});if(i!==-1){winterGroup.removeLayer(winterReports[i].marker);winterReports.splice(i,1)}updateCounter();showToast('🗑 Удалено')}).catch(function(e){console.error(e);showToast('⚠️ Не удалось')})}
 window.markFixed=function(type,id){var table=type==='pothole'?TABLE_POTHOLES:(type==='segment'?TABLE_SEGMENTS:TABLE_WINTER);var now=new Date().toISOString();fetch(SUPABASE_URL+'/rest/v1/'+table+'?id=eq.'+id,{method:'PATCH',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify({status:'fixed',fixed_at:now})}).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(data){if(type==='pothole'){var p=potholes.find(function(x){return x.id===id});if(p){p.status='fixed';p.fixed_at=now;p.marker._popupData.status='fixed';p.marker._popupData.fixed_at=now;p.marker.setIcon(getIconForPothole(p));p.marker.setPopupContent(makePopupContent(p.marker._popupData))}}else if(type==='segment'){var s=segments.find(function(x){return x.id===id});if(s){s.status='fixed';s.fixed_at=now;s.line.setStyle({color:'#2ecc71'});s.line._segmentData.status='fixed';s.line._segmentData.fixed_at=now;s.line.setPopupContent(makeSegmentPopup(s.line._segmentData))}}else{var w=winterReports.find(function(x){return x.id===id});if(w){w.status='fixed';w.fixed_at=now;w.marker._winterData.status='fixed';w.marker._winterData.fixed_at=now;w.marker.setIcon(getWinterIcon(w));w.marker.setPopupContent(makeWinterPopup(w.marker._winterData))}}updateCounter();showToast('🚜 Исполнено!')}).catch(function(e){console.error(e);showToast('⚠️ Не удалось')})};
+// ===== КНОПКИ ДОБАВЛЕНИЯ =====
 addBtn.addEventListener('click',function(){if(segmentMode)cancelSegmentMode();if(winterAddType)cancelWinterMode();addingMode=!addingMode;if(addingMode){addBtn.textContent='✕ Отмена';addBtn.style.background='linear-gradient(135deg,#ff4757 0%,#c0392b 100%)';hintEl.classList.remove('hidden');hintEl.textContent='Увеличьте карту и ткните точнее';document.body.classList.add('map-adding');map.flyTo(map.getCenter(),18,{duration:.8})}else{addBtn.textContent='+ Яма';addBtn.style.background='linear-gradient(135deg,#6a5acd 0%,#483d8b 100%)';hintEl.classList.add('hidden');document.body.classList.remove('map-adding')}});
 segmentBtn.addEventListener('click',function(){if(addingMode){addingMode=false;addBtn.textContent='+ Яма';addBtn.style.background='linear-gradient(135deg,#6a5acd 0%,#483d8b 100%)';document.body.classList.remove('map-adding')}if(winterAddType)cancelWinterMode();segmentMode=!segmentMode;if(segmentMode){segmentBtn.textContent='✕ Отмена';segmentBtn.style.background='linear-gradient(135deg,#ff4757 0%,#c0392b 100%)';hintEl.classList.remove('hidden');hintEl.textContent='Ткните начало участка, затем конец';segmentPoints=[]}else cancelSegmentMode()});
 function cancelSegmentMode(){segmentMode=false;segmentBtn.textContent='🛣 Участок';segmentBtn.style.background='linear-gradient(135deg,#e67e22 0%,#d35400 100%)';hintEl.classList.add('hidden');if(segmentStart){map.removeLayer(segmentStart);segmentStart=null}if(segmentEnd){map.removeLayer(segmentEnd);segmentEnd=null}if(segmentLine){map.removeLayer(segmentLine);segmentLine=null}segmentPoints=[]}
@@ -458,6 +544,7 @@ snowBtn.addEventListener('click',function(){startWinterMode('snow')});
 iceBtn.addEventListener('click',function(){startWinterMode('ice')});
 slushBtn.addEventListener('click',function(){startWinterMode('slush')});
 blockedBtn.addEventListener('click',function(){startWinterMode('blocked')});
+// ===== КЛИК ПО КАРТЕ =====
 map.on('click',function(e){var lat=e.latlng.lat,lng=e.latlng.lng;
 if(winterAddType){var type=winterAddType;cancelWinterMode();winterDraftCoords={lat:lat,lng:lng,type:type};winterModalTitle.textContent=getWinterName(type)+' на дороге';outsideWinterHint.style.display=isInCity(lat,lng)?'none':'block';winterInput.value='';winterModalOverlay.classList.add('show');setTimeout(function(){winterInput.focus()},100);return}
 if(addingMode){document.body.classList.remove('map-adding');if(draftMarker)map.removeLayer(draftMarker);var di=L.divIcon({className:'',html:'<div class="draft-marker"></div>',iconSize:[26,26],iconAnchor:[13,13]});draftMarker=L.marker([lat,lng],{icon:di,draggable:true}).addTo(map);draftTitle.textContent='📍 Уточните местоположение';draftSubtitle.textContent=isInCity(lat,lng)?'Перетащите маркер, увеличьте карту, потом сохраните':'🌄 Окрестности Отрадного — не войдёт в городскую статистику';draftPanel.classList.add('show');addingMode=false;addBtn.textContent='+ Яма';addBtn.style.background='linear-gradient(135deg,#6a5acd 0%,#483d8b 100%)';hintEl.classList.add('hidden');return}
@@ -472,14 +559,14 @@ function openPotholeModal(lat,lng){modalInput.value='';selectedSeverity=1;severi
 modalOk.addEventListener('click',function(){var d=modalInput.value.trim()||'Яма';modalOverlay.classList.remove('show');finalizePothole(window._draftCoords.lat,window._draftCoords.lng,d,selectedSeverity)});
 modalSkip.addEventListener('click',function(){modalOverlay.classList.remove('show');finalizePothole(window._draftCoords.lat,window._draftCoords.lng,'Яма',selectedSeverity)});
 modalInput.addEventListener('keypress',function(e){if(e.key==='Enter')modalOk.click()});
-function finalizePothole(lat,lng,description,severity){savePothole(lat,lng,description,severity).then(function(row){if(draftMarker){map.removeLayer(draftMarker);draftMarker=null}draftPanel.classList.remove('show');document.body.classList.remove('map-adding');row.status=row.status||'active';row.confirmations=row.confirmations||1;var m=createMarker(row);potholes.push({id:row.id,lat:row.lat,lng:row.lng,description:row.description,severity:row.severity,confirmations:row.confirmations,status:row.status,fixed_at:row.fixed_at,marker:m});updateCounter();var inCity=isInCity(lat,lng);showToast(inCity?'✅ Яма сохранена':'✅ Яма в окрестностях сохранена')}).catch(function(e){console.error(e);showToast('⚠️ Не удалось сохранить')})}
+function finalizePothole(lat,lng,description,severity){savePothole(lat,lng,description,severity).then(function(row){if(draftMarker){map.removeLayer(draftMarker);draftMarker=null}draftPanel.classList.remove('show');document.body.classList.remove('map-adding');row.status=row.status||'active';row.confirmations=row.confirmations||1;row.comment=row.comment||'';var m=createMarker(row);potholes.push({id:row.id,lat:row.lat,lng:row.lng,description:row.description,severity:row.severity,confirmations:row.confirmations,status:row.status,fixed_at:row.fixed_at,comment:row.comment,marker:m});updateCounter();var inCity=isInCity(lat,lng);showToast(inCity?'✅ Яма сохранена':'✅ Яма в окрестностях сохранена')}).catch(function(e){console.error(e);showToast('⚠️ Не удалось сохранить')})}
 segmentOk.addEventListener('click',function(){var d=segmentInput.value.trim()||'Убитый участок';segmentModalOverlay.classList.remove('show');finalizeSegment(segmentPoints,d,segmentSeverity)});
 segmentSkip.addEventListener('click',function(){segmentModalOverlay.classList.remove('show');finalizeSegment(segmentPoints,'Убитый участок',segmentSeverity)});
-function finalizeSegment(coords,description,severity){saveSegment(coords,description,severity).then(function(row){if(segmentStart){map.removeLayer(segmentStart);segmentStart=null}if(segmentEnd){map.removeLayer(segmentEnd);segmentEnd=null}if(segmentLine){map.removeLayer(segmentLine);segmentLine=null}segmentPoints=[];draftPanel.classList.remove('show');row.status=row.status||'active';var line=createSegmentLine(row);segments.push({id:row.id,coords:row.coords,severity:row.severity,description:row.description,status:row.status,fixed_at:row.fixed_at,line:line});updateCounter();showToast('✅ Участок сохранён')}).catch(function(e){console.error(e);showToast('⚠️ Не удалось')})}
+function finalizeSegment(coords,description,severity){saveSegment(coords,description,severity).then(function(row){if(segmentStart){map.removeLayer(segmentStart);segmentStart=null}if(segmentEnd){map.removeLayer(segmentEnd);segmentEnd=null}if(segmentLine){map.removeLayer(segmentLine);segmentLine=null}segmentPoints=[];draftPanel.classList.remove('show');row.status=row.status||'active';row.comment=row.comment||'';var line=createSegmentLine(row);segments.push({id:row.id,coords:row.coords,severity:row.severity,description:row.description,status:row.status,fixed_at:row.fixed_at,comment:row.comment,line:line});updateCounter();showToast('✅ Участок сохранён')}).catch(function(e){console.error(e);showToast('⚠️ Не удалось')})}
 winterOk.addEventListener('click',function(){var d=winterInput.value.trim()||'';winterModalOverlay.classList.remove('show');finalizeWinter(winterDraftCoords.lat,winterDraftCoords.lng,winterDraftCoords.type,d)});
 winterSkip.addEventListener('click',function(){winterModalOverlay.classList.remove('show');finalizeWinter(winterDraftCoords.lat,winterDraftCoords.lng,winterDraftCoords.type,'')});
 winterInput.addEventListener('keypress',function(e){if(e.key==='Enter')winterOk.click()});
-function finalizeWinter(lat,lng,type,description){saveWinter(lat,lng,type,description).then(function(row){row.status=row.status||'active';var m=createWinterMarker(row);winterReports.push({id:row.id,lat:row.lat,lng:row.lng,type:row.type,description:row.description,status:row.status,fixed_at:row.fixed_at,marker:m});updateCounter();var inCity=isInCity(lat,lng);showToast('✅ '+getWinterName(type)+(inCity?' сохранён':' (окрестности) сохранён'))}).catch(function(e){console.error(e);showToast('⚠️ Не удалось')})}
+function finalizeWinter(lat,lng,type,description){saveWinter(lat,lng,type,description).then(function(row){row.status=row.status||'active';row.comment=row.comment||'';var m=createWinterMarker(row);winterReports.push({id:row.id,lat:row.lat,lng:row.lng,type:row.type,description:row.description,status:row.status,fixed_at:row.fixed_at,comment:row.comment,marker:m});updateCounter();var inCity=isInCity(lat,lng);showToast('✅ '+getWinterName(type)+(inCity?' сохранён':' (окрестности) сохранён'))}).catch(function(e){console.error(e);showToast('⚠️ Не удалось')})}
 loadAll();
 setTimeout(function(){hintEl.classList.add('hidden')},6000);
 if ('serviceWorker' in navigator) {
