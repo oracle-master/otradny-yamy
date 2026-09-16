@@ -482,6 +482,13 @@ winterInput.addEventListener('keypress',function(e){if(e.key==='Enter')winterOk.
 function finalizeWinter(lat,lng,type,description){saveWinter(lat,lng,type,description).then(function(row){row.status=row.status||'active';var m=createWinterMarker(row);winterReports.push({id:row.id,lat:row.lat,lng:row.lng,type:row.type,description:row.description,status:row.status,fixed_at:row.fixed_at,marker:m});updateCounter();var inCity=isInCity(lat,lng);showToast('✅ '+getWinterName(type)+(inCity?' сохранён':' (окрестности) сохранён'))}).catch(function(e){console.error(e);showToast('⚠️ Не удалось')})}
 loadAll();
 setTimeout(function(){hintEl.classList.add('hidden')},6000);
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('./sw.js')
+      .then(function(reg) { console.log('SW OK:', reg.scope); })
+      .catch(function(err) { console.log('SW error:', err); });
+  });
+}
 </script>
 </body>
 </html>
