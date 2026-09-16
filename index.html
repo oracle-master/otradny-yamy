@@ -300,7 +300,7 @@ var OTRADNY_ZOOM=14;
 var CITY_SUFFIX=', Отрадный, Самарская область';
 var SHARE_URL='https://oracle-master.github.io/otradny-yamy/';
 var SHARE_TEXT='🗺️ Карта ям Отрадного — отмечай ямы, участки и зимние проблемы. Помоги сделать город лучше!';
-var CITY_RADIUS_KM=15;
+var CITY_RADIUS_KM=3;
 var map=L.map('map',{zoomControl:false}).setView(OTRADNY_CENTER,OTRADNY_ZOOM);
 L.control.zoom({position:'bottomright'}).addTo(map);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
