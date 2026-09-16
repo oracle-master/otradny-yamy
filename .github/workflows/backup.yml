@@ -1,1 +1,53 @@
+name: Auto Backup Supabase
 
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch and save backup
+        run: |
+          DATE=$(date +%Y-%m-%d_%H-%M)
+          mkdir -p backup
+          SUPABASE_URL="https://xmajdholmfhuizavwhmr.supabase.co"
+          SUPABASE_KEY="sb_publishable_QF7Ss8n3vhlbe70iJv4tKA_2dy8ijnS"
+          curl -s "$SUPABASE_URL/rest/v1/potholes?select=*" \
+            -H "apikey: $SUPABASE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_KEY" \
+            -o /tmp/potholes.json
+          curl -s "$SUPABASE_URL/rest/v1/road_segments?select=*" \
+            -H "apikey: $SUPABASE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_KEY" \
+            -o /tmp/segments.json
+          curl -s "$SUPABASE_URL/rest/v1/winter_reports?select=*" \
+            -H "apikey: $SUPABASE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_KEY" \
+            -o /tmp/winter.json
+          echo "{\"date\":\"$DATE\",\"potholes\":$(cat /tmp/potholes.json),\"segments\":$(cat /tmp/segments.json),\"winter_reports\":$(cat /tmp/winter.json)}" > "backup/$DATE.json"
+          echo "Backup: backup/$DATE.json"
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add backup/
+          git commit -m "Auto backup $(date +%Y-%m-%d)" || echo "No changes"
+          git push
+
+      - name: Keep only last 90 backups
+        run: |
+          cd backup
+          ls -t *.json | tail -n +91 | xargs -r rm
+          cd ..
+          git add backup/
+          git commit -m "Cleanup" || echo "No cleanup"
+          git push
