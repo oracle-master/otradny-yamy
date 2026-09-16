@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+her<!DOCTYPE html>
 <html lang="ru">
 <head>
 <!-- Yandex.Metrika counter -->
@@ -241,7 +241,6 @@ body.map-adding .leaflet-marker-icon,body.map-adding .leaflet-marker-shadow{poin
 </div>
 </div>
 </div>
-<!-- Модалка комментария -->
 <div class="modal-overlay" id="commentModalOverlay">
 <div class="modal">
 <div class="modal-title">💬 Комментарий</div>
@@ -486,6 +485,9 @@ function getSegmentColor(s){if(s===1)return'#ffe066';if(s===2)return'#ff9f43';re
 function getWinterName(t){if(t==='snow')return'❄️ Снег';if(t==='ice')return'⛸️ Гололёд';if(t==='blocked')return'🚫 Завал';return'🫠 Каша'}
 function getZoneName(lat,lng){return isInCity(lat,lng)?'🏙 Отрадный':'🌄 Окрестности'}
 function escapeHtml(s){if(!s)return'';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+function makeCommentBlock(text){
+return '<div style="background:rgba(80,60,160,.75);border-left:4px solid #b8a8ff;padding:10px 12px;margin-top:8px;border-radius:10px;font-size:14px;color:#ffffff;line-height:1.5;font-weight:600;text-shadow:0 1px 2px rgba(0,0,0,.5);">💬 '+escapeHtml(text)+'</div>';
+}
 // ===== МАРКЕРЫ =====
 function createMarker(row){var m=L.marker([row.lat,row.lng],{icon:getIconForPothole(row)});m._popupData=row;m.bindPopup(makePopupContent(row));clusterGroup.addLayer(m);return m}
 function makePopupContent(d){
@@ -493,8 +495,7 @@ var c=d.confirmations>1?'<div style="font-size:11px;color:#ffa502;margin-top:4px
 var fInfo='';var fBtn='';
 if(d.status==='fixed'){fInfo='<div style="font-size:11px;color:#2ecc71;margin-top:4px;">✅ Заделано '+(d.fixed_at?formatDate(d.fixed_at):'')+'</div>';}
 else{fBtn='<button onclick="markFixed(\'pothole\','+d.id+')" style="margin-top:8px;margin-right:4px;background:#2ecc71;color:white;border:none;padding:6px 12px;border-radius:15px;font-size:12px;cursor:pointer;">✅ Заделано</button>';}
-var commentBlock='';
-if(d.comment){commentBlock='<div style="background:rgba(106,90,205,.15);border-left:3px solid #6a5acd;padding:8px 10px;margin-top:8px;border-radius:8px;font-size:12px;color:#d0c8e8;line-height:1.4;">💬 '+escapeHtml(d.comment)+'</div>';}
+var commentBlock=d.comment?makeCommentBlock(d.comment):'';
 var commentBtn='<button onclick="openComment(\'pothole\','+d.id+')" style="margin-top:8px;margin-right:4px;background:#6a5acd;color:white;border:none;padding:6px 12px;border-radius:15px;font-size:12px;cursor:pointer;">💬 '+(d.comment?'Изменить':'Комментарий')+'</button>';
 return'<div style="min-width:180px;"><div style="font-size:11px;color:#888;margin-bottom:4px;">'+getSeverityName(d.severity)+' · '+getZoneName(d.lat,d.lng)+'</div><b>'+escapeHtml(d.description)+'</b>'+c+fInfo+commentBlock+'<br><small style="color:#888;">'+d.lat.toFixed(5)+', '+d.lng.toFixed(5)+'</small><br>'+fBtn+commentBtn+'<button onclick="askDelete(\'pothole\','+d.id+',\'Удалить яму?\')" style="margin-top:8px;background:#ff4757;color:white;border:none;padding:6px 12px;border-radius:15px;font-size:12px;cursor:pointer;">🗑 Удалить</button></div>'}
 function createSegmentLine(row){var latlngs=row.coords.map(function(c){return[c[0],c[1]]});var mid=row.coords[Math.floor(row.coords.length/2)];var out=!isInCity(mid[0],mid[1]);var color=row.status==='fixed'?'#2ecc71':(out?'#999':getSegmentColor(row.severity));var line=L.polyline(latlngs,{color:color,weight:out?4:6,opacity:out?.5:.8,lineCap:'round',dashArray:out?'10,10':null});line._segmentData=row;line.bindPopup(makeSegmentPopup(row));if(currentSeason==='summer')line.addTo(map);return line}
@@ -504,8 +505,7 @@ var mid=d.coords[Math.floor(d.coords.length/2)];
 var fInfo='';var fBtn='';
 if(d.status==='fixed'){fInfo='<div style="font-size:11px;color:#2ecc71;margin-top:4px;">✅ Заделано '+(d.fixed_at?formatDate(d.fixed_at):'')+'</div>';}
 else{fBtn='<button onclick="markFixed(\'segment\','+d.id+')" style="margin-top:8px;margin-right:4px;background:#2ecc71;color:white;border:none;padding:6px 12px;border-radius:15px;font-size:12px;cursor:pointer;">✅ Заделано</button>';}
-var commentBlock='';
-if(d.comment){commentBlock='<div style="background:rgba(106,90,205,.15);border-left:3px solid #6a5acd;padding:8px 10px;margin-top:8px;border-radius:8px;font-size:12px;color:#d0c8e8;line-height:1.4;">💬 '+escapeHtml(d.comment)+'</div>';}
+var commentBlock=d.comment?makeCommentBlock(d.comment):'';
 var commentBtn='<button onclick="openComment(\'segment\','+d.id+')" style="margin-top:8px;margin-right:4px;background:#6a5acd;color:white;border:none;padding:6px 12px;border-radius:15px;font-size:12px;cursor:pointer;">💬 '+(d.comment?'Изменить':'Комментарий')+'</button>';
 return'<div style="min-width:180px;"><div style="font-size:11px;color:#e67e22;margin-bottom:4px;">🛣 УЧАСТОК · '+getSeverityName(d.severity)+' · '+getZoneName(mid[0],mid[1])+'</div><b>'+escapeHtml(d.description||'Убитый участок')+'</b>'+fInfo+commentBlock+'<br><small style="color:#888;">Длина: '+Math.round(len)+' м</small><br>'+fBtn+commentBtn+'<button onclick="askDelete(\'segment\','+d.id+',\'Удалить участок?\')" style="margin-top:8px;background:#ff4757;color:white;border:none;padding:6px 12px;border-radius:15px;font-size:12px;cursor:pointer;">🗑 Удалить</button></div>'}
 function createWinterMarker(row){var m=L.marker([row.lat,row.lng],{icon:getWinterIcon(row)});m._winterData=row;m.bindPopup(makeWinterPopup(row));winterGroup.addLayer(m);return m}
@@ -513,8 +513,7 @@ function makeWinterPopup(d){
 var name=getWinterName(d.type);var fInfo='';var fBtn='';
 if(d.status==='fixed'){fInfo='<div style="font-size:11px;color:#2ecc71;margin-top:4px;">🚜 Исполнено '+(d.fixed_at?formatDate(d.fixed_at):'')+'</div>';}
 else{fBtn='<button onclick="markFixed(\'winter\','+d.id+')" style="margin-top:8px;margin-right:4px;background:#2ecc71;color:white;border:none;padding:6px 12px;border-radius:15px;font-size:12px;cursor:pointer;">🚜 Исполнено</button>';}
-var commentBlock='';
-if(d.comment){commentBlock='<div style="background:rgba(106,90,205,.15);border-left:3px solid #6a5acd;padding:8px 10px;margin-top:8px;border-radius:8px;font-size:12px;color:#d0c8e8;line-height:1.4;">💬 '+escapeHtml(d.comment)+'</div>';}
+var commentBlock=d.comment?makeCommentBlock(d.comment):'';
 var commentBtn='<button onclick="openComment(\'winter\','+d.id+')" style="margin-top:8px;margin-right:4px;background:#6a5acd;color:white;border:none;padding:6px 12px;border-radius:15px;font-size:12px;cursor:pointer;">💬 '+(d.comment?'Изменить':'Комментарий')+'</button>';
 return'<div style="min-width:160px;"><div style="font-size:11px;color:#8a80a8;margin-bottom:4px;">'+name+' · '+getZoneName(d.lat,d.lng)+'</div><b>'+escapeHtml(d.description||'Без описания')+'</b>'+fInfo+commentBlock+'<br><small style="color:#888;">'+d.lat.toFixed(5)+', '+d.lng.toFixed(5)+'</small><br>'+fBtn+commentBtn+'<button onclick="askDelete(\'winter\','+d.id+',\'Удалить отметку?\')" style="margin-top:8px;background:#ff4757;color:white;border:none;padding:6px 12px;border-radius:15px;font-size:12px;cursor:pointer;">🗑 Удалить</button></div>'}
 // ===== ЗАГРУЗКА =====
