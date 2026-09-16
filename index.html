@@ -76,7 +76,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,Blink
 .segment-point{background:#e67e22;border:3px solid #fff;border-radius:50%;width:20px;height:20px;box-shadow:0 0 15px rgba(230,126,34,.9);animation:draftPulse 1s infinite}
 .my-location-marker{background:#4285f4;border:3px solid #fff;border-radius:50% 50% 50% 0;width:24px;height:24px;transform:rotate(-45deg);box-shadow:0 0 15px rgba(66,133,244,.8);position:relative}
 .my-location-marker::after{content:'';position:absolute;width:8px;height:8px;background:#fff;border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%) rotate(45deg)}
-.toast{position:absolute;top:160px;left:50%;transform:translateX(-50%) translateY(-100px);z-index:2000;background:rgba(26,26,46,.95);color:#fff;padding:12px 24px;border-radius:30px;border:1px solid rgba(160,152,192,.5);font-size:13px;font-weight:600;opacity:0;transition:transform .4s ease,opacity .4s ease;pointer-events:none;white-space:nowrap;max-width:90%;text-align:center}
+.toast{position:fixed;top:80px;left:50%;transform:translateX(-50%) translateY(-100px);z-index:9999;background:rgba(26,26,46,.98);color:#fff;padding:12px 24px;border-radius:30px;border:1px solid rgba(160,152,192,.5);font-size:13px;font-weight:600;opacity:0;transition:transform .4s ease,opacity .4s ease;pointer-events:none;white-space:nowrap;max-width:90%;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.6)}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
 .hint{position:absolute;top:150px;left:50%;transform:translateX(-50%);z-index:999;background:rgba(26,26,46,.9);color:#e0d8f0;padding:8px 16px;border-radius:20px;font-size:12px;border:1px solid rgba(160,152,192,.3);transition:opacity .5s;white-space:nowrap}
 .hint.hidden{opacity:0;pointer-events:none}
@@ -87,7 +87,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,Blink
 .draft-buttons{display:flex;gap:10px}
 .draft-btn-save{flex:1;background:linear-gradient(135deg,#2ecc71 0%,#27ae60 100%);border:none;color:#fff;padding:14px;border-radius:30px;font-size:15px;font-weight:700;cursor:pointer}
 .draft-btn-cancel{flex:1;background:transparent;border:2px solid rgba(255,71,87,.6);color:#ff6b7a;padding:14px;border-radius:30px;font-size:15px;font-weight:700;cursor:pointer}
-.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:3000;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:3000;display:none;align-items:center;justify-content:center;padding:20px;overflow-y:auto}
 .modal-overlay.show{display:flex}
 .modal{background:linear-gradient(180deg,#1a1a2e 0%,#0f0f1e 100%);border:1px solid rgba(160,152,192,.4);border-radius:20px;padding:20px;max-width:440px;width:100%;color:#fff;max-height:90vh;overflow-y:auto}
 .modal-title{font-size:17px;font-weight:700;margin-bottom:12px;color:#f0e8ff}
@@ -97,6 +97,8 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,Blink
 .modal-textarea{width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:12px 14px;color:#fff;font-size:15px;outline:none;margin-bottom:14px;font-family:inherit;resize:vertical;min-height:100px}
 .modal-textarea::placeholder{color:#6a6088}
 .modal-textarea:focus{border-color:rgba(160,152,192,.6)}
+.modal-error{background:rgba(231,76,60,.2);border:1px solid rgba(231,76,60,.6);border-radius:12px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:#ffb8b8;line-height:1.4;display:none}
+.modal-error.show{display:block}
 .severity-label{font-size:13px;color:#a098c0;margin-bottom:8px;font-weight:600}
 .severity-options{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
 .severity-option{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.05);border:2px solid transparent;border-radius:14px;padding:12px 14px;cursor:pointer;transition:all .2s}
@@ -251,6 +253,7 @@ body.map-adding .leaflet-marker-icon,body.map-adding .leaflet-marker-shadow{poin
 <div class="modal-overlay" id="commentModalOverlay">
 <div class="modal">
 <div class="modal-title">💬 Комментарий</div>
+<div class="modal-error" id="commentError"></div>
 <textarea class="modal-textarea" id="commentInput" placeholder="Например: объезжайте, тут убито" maxlength="300"></textarea>
 <div class="modal-buttons">
 <button class="modal-btn-skip" id="commentCancel">Отмена</button>
@@ -354,16 +357,12 @@ var SHARE_TEXT='🗺️ Карта ям Отрадного — отмечай я
 var CITY_RADIUS_KM=3;
 var ADMIN_PASSWORD='фокс';
 var ADMIN_HOLD_MS=14000;
-// Запрещённые слова и паттерны для комментариев
 var BAD_WORDS=['хуй','хуя','хуе','пизд','ебал','ебан','ебат','ебет','бляд','блять','блят','сука','сучк','мудак','мудил','залуп','долбоеб','долбоёб','пидор','пидар','гандон','шлюх','мразь','нах','наху','пиздец'];
 var BAD_PATTERNS=[/https?:\/\//i,/www\./i,/\.ru\b/i,/\.com\b/i,/\.net\b/i,/\.org\b/i,/vk\.com/i,/t\.me/i,/wa\.me/i,/telegram/i,/whatsapp/i,/казино/i,/ставк[аи]/i,/заработ[ао]к/i,/кредит/i,/займ/i];
 function checkCommentText(text){
 var low=text.toLowerCase();
-// Проверка на запрещённые слова
 for(var i=0;i<BAD_WORDS.length;i++){if(low.indexOf(BAD_WORDS[i])!==-1){return '🚫 Нецензурная лексика запрещена';}}
-// Проверка на ссылки/рекламу
 for(var j=0;j<BAD_PATTERNS.length;j++){if(BAD_PATTERNS[j].test(text)){return '🚫 Ссылки и реклама запрещены';}}
-// Проверка на капс
 var letters=text.replace(/[^A-Za-zА-Яа-яЁё]/g,'');
 if(letters.length>10){var upper=letters.replace(/[^A-ZА-ЯЁ]/g,'').length;if(upper/letters.length>0.6){return '🚫 Слишком много заглавных букв';}}
 return null;
@@ -396,7 +395,7 @@ var draftPanel=$('draftPanel'),draftTitle=$('draftTitle'),draftSubtitle=$('draft
 var modalOverlay=$('modalOverlay'),modalInput=$('modalInput'),modalOk=$('modalOk'),modalSkip=$('modalSkip'),severityOptions=$('severityOptions'),outsideHint=$('outsideHint');
 var winterModalOverlay=$('winterModalOverlay'),winterInput=$('winterInput'),winterOk=$('winterOk'),winterSkip=$('winterSkip'),winterModalTitle=$('winterModalTitle'),outsideWinterHint=$('outsideWinterHint');
 var segmentModalOverlay=$('segmentModalOverlay'),segmentInput=$('segmentInput'),segmentOk=$('segmentOk'),segmentSkip=$('segmentSkip'),segmentSeverityOptions=$('segmentSeverityOptions');
-var commentModalOverlay=$('commentModalOverlay'),commentInput=$('commentInput'),commentOk=$('commentOk'),commentCancel=$('commentCancel');
+var commentModalOverlay=$('commentModalOverlay'),commentInput=$('commentInput'),commentOk=$('commentOk'),commentCancel=$('commentCancel'),commentError=$('commentError');
 var searchModalOverlay=$('searchModalOverlay'),searchResults=$('searchResults'),searchCancel=$('searchCancel');
 var nearbyOverlay=$('nearbyOverlay'),nearbyInfo=$('nearbyInfo'),nearbyConfirm=$('nearbyConfirm'),nearbyNew=$('nearbyNew'),nearbyCancel=$('nearbyCancel');
 var deleteModalOverlay=$('deleteModalOverlay'),deleteModalTitle=$('deleteModalTitle'),deleteModalText=$('deleteModalText'),deleteConfirm=$('deleteConfirm'),deleteCancel=$('deleteCancel');
@@ -408,6 +407,8 @@ var seasonSummer=$('seasonSummer'),seasonWinter=$('seasonWinter');
 var counterSummer=$('counterSummer'),counterWinter=$('counterWinter');
 var buttonsSummer=$('buttonsSummer'),buttonsWinter=$('buttonsWinter'),buttonsWinter2=$('buttonsWinter2');
 function showToast(t){toastEl.textContent=t;toastEl.classList.add('show');setTimeout(function(){toastEl.classList.remove('show')},2500)}
+function showCommentError(t){commentError.textContent=t;commentError.classList.add('show');commentInput.focus()}
+function hideCommentError(){commentError.classList.remove('show');commentError.textContent=''}
 function formatDate(iso){if(!iso)return'';var d=new Date(iso);return String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+d.getFullYear()}
 function updateCounter(){
 var inCityP=potholes.filter(function(p){return isInCity(p.lat,p.lng)});
@@ -433,7 +434,6 @@ function findNearbyPothole(lat,lng){for(var i=0;i<potholes.length;i++){if(pothol
 function setSeason(season){currentSeason=season;if(season==='summer'){seasonSummer.classList.add('active');seasonWinter.classList.remove('active');counterSummer.style.display='flex';counterWinter.style.display='none';buttonsSummer.style.display='flex';buttonsWinter.style.display='none';buttonsWinter2.style.display='none';map.addLayer(clusterGroup);segments.forEach(function(s){if(s.line)map.addLayer(s.line)});map.removeLayer(winterGroup);hintEl.textContent='Нажми «+ Яма» и ткни в карту';showToast('🌞 Летний режим')}else{seasonWinter.classList.add('active');seasonSummer.classList.remove('active');counterSummer.style.display='none';counterWinter.style.display='flex';buttonsSummer.style.display='none';buttonsWinter.style.display='flex';buttonsWinter2.style.display='flex';map.removeLayer(clusterGroup);segments.forEach(function(s){if(s.line)map.removeLayer(s.line)});map.addLayer(winterGroup);hintEl.textContent='Выбери тип и ткни в карту';showToast('❄️ Зимний режим')}}
 seasonSummer.addEventListener('click',function(){setSeason('summer')});
 seasonWinter.addEventListener('click',function(){setSeason('winter')});
-// ===== АДМИН =====
 var adminTimer=null;
 function startAdminTimer(e){if(e)e.preventDefault();clearTimeout(adminTimer);adminTimer=setTimeout(openPasswordModal,ADMIN_HOLD_MS)}
 function stopAdminTimer(){clearTimeout(adminTimer)}
@@ -471,7 +471,6 @@ showToast('✅ Архив скачан');
 adminDeletePotholes.addEventListener('click',function(){if(!confirm('Удалить ВСЕ ямы? Это необратимо.\n\nРекомендую сначала скачать архив!'))return;fetch(SUPABASE_URL+'/rest/v1/'+TABLE_POTHOLES+'?id=gt.0',{method:'DELETE',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}}).then(function(){clusterGroup.clearLayers();potholes=[];updateCounter();showToast('🗑 Все ямы удалены');adminModalOverlay.classList.remove('show')}).catch(function(e){console.error(e);showToast('⚠️ Не удалось')})});
 adminDeleteSegments.addEventListener('click',function(){if(!confirm('Удалить ВСЕ участки? Это необратимо.\n\nРекомендую сначала скачать архив!'))return;fetch(SUPABASE_URL+'/rest/v1/'+TABLE_SEGMENTS+'?id=gt.0',{method:'DELETE',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}}).then(function(){segments.forEach(function(s){if(s.line)map.removeLayer(s.line)});segments=[];updateCounter();showToast('🗑 Все участки удалены');adminModalOverlay.classList.remove('show')}).catch(function(e){console.error(e);showToast('⚠️ Не удалось')})});
 adminDeleteWinter.addEventListener('click',function(){if(!confirm('Удалить ВСЕ зимние отметки? Это необратимо.\n\nРекомендую сначала скачать архив!'))return;fetch(SUPABASE_URL+'/rest/v1/'+TABLE_WINTER+'?id=gt.0',{method:'DELETE',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}}).then(function(){winterGroup.clearLayers();winterReports=[];updateCounter();showToast('🗑 Все зимние удалены');adminModalOverlay.classList.remove('show')}).catch(function(e){console.error(e);showToast('⚠️ Не удалось')})});
-// ===== СТАТИСТИКА =====
 statsBtn.addEventListener('click',function(){renderStats();statsModalOverlay.classList.add('show')});
 statsClose.addEventListener('click',function(){statsModalOverlay.classList.remove('show')});
 function renderStats(){
@@ -515,19 +514,30 @@ if(badRepair.length>0)html+='<div class="stats-line"><span>Плохой ремо
 html+='</div>';
 statsContent.innerHTML=html;
 }
-// ===== КОММЕНТАРИИ =====
-window.openComment=function(type,id){commentType=type;commentId=id;var item=null;if(type==='pothole')item=potholes.find(function(x){return x.id===id});else if(type==='segment')item=segments.find(function(x){return x.id===id});else item=winterReports.find(function(x){return x.id===id});if(!item)return;commentInput.value=item.comment||'';commentModalOverlay.classList.add('show');setTimeout(function(){commentInput.focus()},100)};
-commentCancel.addEventListener('click',function(){commentModalOverlay.classList.remove('show');commentType=null;commentId=null});
+window.openComment=function(type,id){
+commentType=type;commentId=id;
+var item=null;
+if(type==='pothole')item=potholes.find(function(x){return x.id===id});
+else if(type==='segment')item=segments.find(function(x){return x.id===id});
+else item=winterReports.find(function(x){return x.id===id});
+if(!item)return;
+commentInput.value=item.comment||'';
+hideCommentError();
+commentModalOverlay.classList.add('show');
+setTimeout(function(){commentInput.focus()},100);
+};
+commentCancel.addEventListener('click',function(){commentModalOverlay.classList.remove('show');commentType=null;commentId=null;hideCommentError()});
+commentInput.addEventListener('input',function(){hideCommentError()});
 commentOk.addEventListener('click',function(){
 var text=commentInput.value.trim();
 var err=checkCommentText(text);
-if(err){showToast(err);return;}
+if(err){showCommentError(err);return;}
 if(commentType&&commentId)saveComment(commentType,commentId,text);
 commentModalOverlay.classList.remove('show');
 commentType=null;commentId=null;
+hideCommentError();
 });
 function saveComment(type,id,text){var table=type==='pothole'?TABLE_POTHOLES:(type==='segment'?TABLE_SEGMENTS:TABLE_WINTER);fetch(SUPABASE_URL+'/rest/v1/'+table+'?id=eq.'+id,{method:'PATCH',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify({comment:text})}).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(data){if(type==='pothole'){var p=potholes.find(function(x){return x.id===id});if(p){p.comment=text;p.marker._popupData.comment=text;p.marker.setPopupContent(makePopupContent(p.marker._popupData))}}else if(type==='segment'){var s=segments.find(function(x){return x.id===id});if(s){s.comment=text;s.line._segmentData.comment=text;s.line.setPopupContent(makeSegmentPopup(s.line._segmentData))}}else{var w=winterReports.find(function(x){return x.id===id});if(w){w.comment=text;w.marker._winterData.comment=text;w.marker.setPopupContent(makeWinterPopup(w.marker._winterData))}}showToast('💬 Комментарий сохранён')}).catch(function(e){console.error(e);showToast('⚠️ Не удалось')})}
-// ===== SHARE =====
 shareBtn.addEventListener('click',function(){shareModalOverlay.classList.add('show')});
 shareCancel.addEventListener('click',function(){shareModalOverlay.classList.remove('show')});
 window.shareVia=function(service){var text=encodeURIComponent(SHARE_TEXT);var url=encodeURIComponent(SHARE_URL);var link='';if(service==='whatsapp')link='https://wa.me/?text='+text+'%20'+url;else if(service==='telegram')link='https://t.me/share/url?url='+url+'&text='+text;else if(service==='vk')link='https://vk.com/share.php?url='+url+'&title='+text;else if(service==='sms')link='sms:?body='+text+'%20'+url;else if(service==='email')link='mailto:?subject='+encodeURIComponent('Карта ям Отрадного')+'&body='+text+'%20'+url;if(link)window.open(link,'_blank');shareModalOverlay.classList.remove('show')};
@@ -574,7 +584,7 @@ function reallyDeletePothole(id){deletePotholeCloud(id).then(function(){var i=po
 function reallyDeleteSegment(id){deleteSegmentCloud(id).then(function(){var i=segments.findIndex(function(s){return s.id===id});if(i!==-1){map.removeLayer(segments[i].line);segments.splice(i,1)}updateCounter();showToast('🗑 Участок удалён')}).catch(function(e){console.error(e);showToast('⚠️ Не удалось')})}
 function reallyDeleteWinter(id){deleteWinterCloud(id).then(function(){var i=winterReports.findIndex(function(w){return w.id===id});if(i!==-1){winterGroup.removeLayer(winterReports[i].marker);winterReports.splice(i,1)}updateCounter();showToast('🗑 Удалено')}).catch(function(e){console.error(e);showToast('⚠️ Не удалось')})}
 window.markFixed=function(type,id){var table=type==='pothole'?TABLE_POTHOLES:(type==='segment'?TABLE_SEGMENTS:TABLE_WINTER);var now=new Date().toISOString();fetch(SUPABASE_URL+'/rest/v1/'+table+'?id=eq.'+id,{method:'PATCH',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify({status:'fixed',fixed_at:now})}).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(data){if(type==='pothole'){var p=potholes.find(function(x){return x.id===id});if(p){p.status='fixed';p.fixed_at=now;p.marker._popupData.status='fixed';p.marker._popupData.fixed_at=now;p.marker.setIcon(getIconForPothole(p));p.marker.setPopupContent(makePopupContent(p.marker._popupData))}}else if(type==='segment'){var s=segments.find(function(x){return x.id===id});if(s){s.status='fixed';s.fixed_at=now;s.line.setStyle({color:'#2ecc71'});s.line._segmentData.status='fixed';s.line._segmentData.fixed_at=now;s.line.setPopupContent(makeSegmentPopup(s.line._segmentData))}}else{var w=winterReports.find(function(x){return x.id===id});if(w){w.status='fixed';w.fixed_at=now;w.marker._winterData.status='fixed';w.marker._winterData.fixed_at=now;w.marker.setIcon(getWinterIcon(w));w.marker.setPopupContent(makeWinterPopup(w.marker._winterData))}}updateCounter();showToast('🚜 Исполнено!')}).catch(function(e){console.error(e);showToast('⚠️ Не удалось')})};
-window.markBadRepair=function(type,id){var table=type==='pothole'?TABLE_POTHOLES:(type==='segment'?TABLE_SEGMENTS:TABLE_WINTER);fetch(SUPABASE_URL+'/rest/v1/'+table+'?id=eq.'+id,{method:'PATCH',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify({status:'bad_repair'})}).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(data){if(type==='pothole'){var p=potholes.find(function(x){return x.id===id});if(p){p.status='bad_repair';p.marker._popupData.status='bad_repair';p.marker.setIcon(getIconForPothole(p));p.marker.setPopupContent(makePopupContent(p.marker._popupData))}}else if(type==='segment'){var s=segments.find(function(x){return x.id===id});if(s){s.status='bad_repair';s.line.setStyle({color:'#9b59b6'});s.line._segmentData.status='bad_repair';s.line.setPopupContent(makeSegmentPopup(s.line._segmentData))}}else{var w=winterReports.find(function(x){return x.id===id});if(w){w.status='bad_repair';w.marker._winterData.status='bad_repair';w.marker.setIcon(getWinterIcon(w));w.marker.setPopupContent(makeWinterPopup(w.marker._winterData))}}updateCounter();showToast('🔥 Помечено как плохой ремонт')}).catch(function(e){console.error(e);showToast('⚠️ Не удалось')})};
+window.markBadRepair=function(type,id){var table=type==='pothole'?TABLE_POTHOLES:(type==='segment'?TABLE_SEGMENTS:TABLE_WINTER);fetch(SUPABASE_URL+'/rest/v1/'+table+'?id=eq.'+id,{method:'PATCH',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify({status:'bad_repair'})}).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(data){if(type==='pothole'){var p=potholes.find(function(x){return x.id===id});if(p){p.status='bad_repair';p.marker._popupData.status='bad_repair';p.marker.setIcon(getIconForPothole(p));p.marker.setPopupContent(makePopupContent(p.marker._popupData))}}else if(type==='segment'){var s=segments.find(function(x){return x.id===id});if(s){s.status='bad_repair';s.line.setStyle({color:'#9b59b6'});s.line._segmentData.status='bad_repair';s.line.setPopupContent(makeSegmentPopup(s.line._segmentData))}}else{var w=winterReports.find(function(x){return x.id===id});if(w){w.status='bad_repair';w.marker._winterData.status='bad_repair';w.marker.setIcon(getWinterIcon(w));w.marker.setPopupContent(makeWinterPopup(w.marker._winterData))}}updateCounter();showToast('🔥 Помечено')}).catch(function(e){console.error(e);showToast('⚠️ Не удалось')})};
 addBtn.addEventListener('click',function(){if(segmentMode)cancelSegmentMode();if(winterAddType)cancelWinterMode();addingMode=!addingMode;if(addingMode){addBtn.textContent='✕ Отмена';addBtn.style.background='linear-gradient(135deg,#ff4757 0%,#c0392b 100%)';hintEl.classList.remove('hidden');hintEl.textContent='Увеличьте карту и ткните точнее';document.body.classList.add('map-adding');map.flyTo(map.getCenter(),18,{duration:.8})}else{addBtn.textContent='+ Яма';addBtn.style.background='linear-gradient(135deg,#6a5acd 0%,#483d8b 100%)';hintEl.classList.add('hidden');document.body.classList.remove('map-adding')}});
 segmentBtn.addEventListener('click',function(){if(addingMode){addingMode=false;addBtn.textContent='+ Яма';addBtn.style.background='linear-gradient(135deg,#6a5acd 0%,#483d8b 100%)';document.body.classList.remove('map-adding')}if(winterAddType)cancelWinterMode();segmentMode=!segmentMode;if(segmentMode){segmentBtn.textContent='✕ Отмена';segmentBtn.style.background='linear-gradient(135deg,#ff4757 0%,#c0392b 100%)';hintEl.classList.remove('hidden');hintEl.textContent='Ткните начало участка, затем конец';segmentPoints=[]}else cancelSegmentMode()});
 function cancelSegmentMode(){segmentMode=false;segmentBtn.textContent='🛣 Участок';segmentBtn.style.background='linear-gradient(135deg,#e67e22 0%,#d35400 100%)';hintEl.classList.add('hidden');if(segmentStart){map.removeLayer(segmentStart);segmentStart=null}if(segmentEnd){map.removeLayer(segmentEnd);segmentEnd=null}if(segmentLine){map.removeLayer(segmentLine);segmentLine=null}segmentPoints=[]}
