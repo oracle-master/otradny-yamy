@@ -41,6 +41,13 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,Blink
 .search-input{flex:1;background-color:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:8px 12px 8px 38px;color:#fff;font-size:13px;outline:none;min-width:0;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%238a80a8'><path d='M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z'/></svg>");background-repeat:no-repeat;background-position:12px center;background-size:18px 18px}
 .search-tap-area{position:absolute;left:0;top:0;bottom:0;width:40px;background:transparent;border:none;cursor:pointer;padding:0;z-index:2}
 .search-tap-area:active{background:rgba(255,255,255,.06);border-radius:20px 0 0 20px}
+.search-suggestions{position:absolute;top:calc(100% + 6px);left:0;right:0;background:#1a1a2e;border:1px solid rgba(160,152,192,.5);border-radius:14px;max-height:280px;overflow-y:auto;z-index:100;display:none;box-shadow:0 8px 30px rgba(0,0,0,.7)}
+.search-suggestions.show{display:block}
+.search-suggestion{padding:10px 14px;cursor:pointer;border-bottom:1px solid rgba(160,152,192,.12);transition:background .15s}
+.search-suggestion:last-child{border-bottom:none}
+.search-suggestion:active{background:rgba(106,90,205,.35)}
+.search-suggestion-title{color:#f0e8ff;font-weight:600;font-size:13px;margin-bottom:3px}
+.search-suggestion-addr{color:#8a80a8;font-size:11px;line-height:1.3}
 .search-input::placeholder{color:#8a80a8}
 .icon-btn{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;padding:0;border-radius:20px;font-size:15px;cursor:pointer;white-space:nowrap;flex-shrink:0;display:flex;align-items:center;justify-content:center;width:36px;height:36px}
 .locate-btn-header{background:rgba(66,133,244,.2);border:1px solid rgba(66,133,244,.5);color:#7aa7ff}
@@ -184,8 +191,9 @@ body.map-adding .leaflet-marker-icon,body.map-adding .leaflet-marker-shadow{poin
 </div>
 <div class="search-row">
 <div class="search-wrap">
-<input type="text" class="search-input" id="searchInput" placeholder="Ленина 15, школа №4, Озон...">
+<input type="text" class="search-input" id="searchInput" placeholder="Ленина 15, школа №4, Озон..." autocomplete="off">
 <button class="search-tap-area" id="searchTapBtn" type="button" aria-label="Искать"></button>
+<div class="search-suggestions" id="searchSuggestions"></div>
 </div>
 <button class="icon-btn locate-btn-header" id="locateBtn" title="Я здесь">📍</button>
 <button class="icon-btn stats-btn-header" id="statsBtn" title="Статистика">📊</button>
@@ -394,7 +402,7 @@ var potholeCountEl=$('potholeCount'),fixedCountEl=$('fixedCount'),badCountEl=$('
 var segmentCountEl=$('segmentCount'),outsideCountEl=$('outsideCount'),outsideWinterCountEl=$('outsideWinterCount');
 var snowCountEl=$('snowCount'),iceCountEl=$('iceCount'),slushCountEl=$('slushCount'),blockedCountEl=$('blockedCount');
 var toastEl=$('toast'),hintEl=$('hint'),headerBadge=$('headerBadge');
-var searchInput=$('searchInput'),searchTapBtn=$('searchTapBtn');
+var searchInput=$('searchInput'),searchTapBtn=$('searchTapBtn'),searchSuggestions=$('searchSuggestions');
 var bottomPanel=$('bottomPanel');
 var draftPanel=$('draftPanel'),draftTitle=$('draftTitle'),draftSubtitle=$('draftSubtitle'),draftSave=$('draftSave'),draftCancel=$('draftCancel');
 var repairPanel=$('repairPanel'),repairSubtitle=$('repairSubtitle'),repairUndo=$('repairUndo'),repairSave=$('repairSave'),repairExit=$('repairExit');
@@ -480,7 +488,6 @@ var dx=px-xx,dy=py-yy;
 return Math.sqrt(dx*dx+dy*dy);
 }
 function getPotholesNearLine(coords,radius){var r=[];potholes.forEach(function(p){if(p.status!=='active')return;for(var i=1;i<coords.length;i++){var d=distToSegment(p.lat,p.lng,coords[i-1][0],coords[i-1][1],coords[i][0],coords[i][1]);if(d<=radius){r.push(p);return}}});return r}
-// ===== RPC-ХЕЛПЕРЫ ДЛЯ АДМИНСКИХ УДАЛЕНИЙ =====
 function getAdminPassword(){
   var p=sessionStorage.getItem('otradny_admin_pwd');
   if(!p){
@@ -640,7 +647,6 @@ fetch(SUPABASE_URL+'/rest/v1/'+TABLE_SEGMENTS+'?select=*',{headers:{'apikey':SUP
 fetch(SUPABASE_URL+'/rest/v1/'+TABLE_WINTER+'?select=*',{headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}}).then(function(r){return r.json()}),
 fetch(SUPABASE_URL+'/rest/v1/'+TABLE_REPAIRS+'?select=*',{headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}}).then(function(r){return r.json()})
 ]).then(function(d){var b={date:new Date().toISOString(),potholes:d[0],segments:d[1],winter_reports:d[2],road_repairs:d[3]};var blob=new Blob([JSON.stringify(b,null,2)],{type:'application/json'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='otradny-yamy-backup-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);showToast('✅ Скачано')}).catch(function(e){console.error(e);showToast('⚠️ Не удалось')})}
-// АДМИН: удалить ВСЕ ямы через RPC
 adminDeletePotholes.addEventListener('click',function(){
   if(!confirm('Удалить ВСЕ ямы? Необратимо.'))return;
   var pwd=getAdminPassword();
@@ -818,7 +824,6 @@ function saveRepairToCloud(coords,description){return fetch(SUPABASE_URL+'/rest/
 function createRepairLine(row){var ll=row.coords.map(function(c){return[c[0],c[1]]});var line=L.polyline(ll,{color:'#2ecc71',weight:8,opacity:.85,lineCap:'round'});line._repairData=row;line.bindPopup(makeRepairPopup(row));line.addTo(map);return line}
 function makeRepairPopup(d){var len=0;for(var i=1;i<d.coords.length;i++)len+=distM(d.coords[i-1][0],d.coords[i-1][1],d.coords[i][0],d.coords[i][1]);var dateStr=d.created_at?formatDate(d.created_at):'';return '<div style="min-width:180px"><div style="font-size:11px;color:#2ecc71;margin-bottom:4px">🛣️ РЕМОНТ ДОРОГИ</div><b>'+esc(d.description||'Отремонтировано')+'</b><br><small style="color:#888">Длина: '+Math.round(len)+' м</small><br><small style="color:#888">Дата: '+dateStr+'</small><br><button onclick="deleteRepair('+d.id+')" style="margin-top:8px;background:#ff4757;color:#fff;border:none;padding:6px 12px;border-radius:15px;font-size:12px;cursor:pointer">🗑 Удалить</button></div>'}
 function finalizeRepair(coords,description){var nb=getPotholesNearLine(coords,REPAIR_LINE_RADIUS);saveRepairToCloud(coords,description).then(function(row){cancelRepairMode();var line=createRepairLine(row);repairs.push({id:row.id,coords:row.coords,description:row.description,created_at:row.created_at,line:line});var ids=nb.map(function(p){return p.id});var nowIso=new Date().toISOString();Promise.all(ids.map(function(id){return fetch(SUPABASE_URL+'/rest/v1/'+TABLE_POTHOLES+'?id=eq.'+id,{method:'PATCH',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify({status:'fixed',repair_type:'full',repair_id:row.id,fixed_at:nowIso})})})).then(function(){ids.forEach(function(id){var p=potholes.find(function(x){return x.id===id});if(p&&p.marker){p.status='fixed';p.repair_type='full';p.repair_id=row.id;p.fixed_at=nowIso;p.marker._popupData.status='fixed';p.marker._popupData.repair_type='full';p.marker._popupData.repair_id=row.id;p.marker._popupData.fixed_at=p.fixed_at;if(!historyMode)clusterGroup.removeLayer(p.marker);else p.marker.setIcon(getPotholeIcon(p,true))}});updateCounter();showToast('✅ Ремонт сохранён. Заделано ям: '+ids.length)}).catch(function(e){console.error(e);showToast('⚠️ Ошибка заделки ям')})}).catch(function(e){console.error(e);showToast('⚠️ Не удалось сохранить ремонт')})}
-// УДАЛЕНИЕ РЕМОНТА — через RPC
 window.deleteRepair=function(id){
   if(!confirm('Удалить ремонт? Ямы вернутся на карту.'))return;
   var pwd=getAdminPassword();
@@ -865,6 +870,7 @@ function doSearch(){
   if(q.length<3){showToast('⚠️ Введите минимум 3 символа');searchInput.focus();return}
   if(searchBusy)return;
   searchBusy=true;searchInput.style.opacity='.7';
+  hideSuggestions();
   showToast('🔍 Ищу...');
   var url='https://nominatim.openstreetmap.org/search?format=json&limit=8&addressdetails=1&q='+encodeURIComponent(q+CITY_SUFFIX);
   fetch(url,{headers:{'Accept-Language':'ru'}})
@@ -908,6 +914,73 @@ function goToSearch(x){
 searchInput.addEventListener('keypress',function(e){if(e.key==='Enter'){e.preventDefault();doSearch()}});
 searchTapBtn.addEventListener('click',doSearch);
 searchCancel.addEventListener('click',function(){searchModalOverlay.classList.remove('show')});
+// ===== АВТОДОПОЛНЕНИЕ =====
+var suggestTimer=null,suggestBusy=false;
+function hideSuggestions(){searchSuggestions.classList.remove('show');searchSuggestions.innerHTML=''}
+function doSuggest(){
+  var q=searchInput.value.trim();
+  if(q.length<4){hideSuggestions();return}
+  if(suggestBusy)return;
+  suggestBusy=true;
+  var url='https://nominatim.openstreetmap.org/search?format=json&limit=6&addressdetails=1&q='+encodeURIComponent(q+CITY_SUFFIX);
+  fetch(url,{headers:{'Accept-Language':'ru'}})
+    .then(function(r){return r.ok?r.json():[]})
+    .then(function(list){
+      suggestBusy=false;
+      if(!list||!list.length){hideSuggestions();return}
+      var items=[],seen={};
+      list.forEach(function(x){
+        var lat=+x.lat,lng=+x.lon;
+        if(isNaN(lat)||isNaN(lng))return;
+        if(distM(lat,lng,OTRADNY_CENTER[0],OTRADNY_CENTER[1])>15000)return;
+        var key=lat.toFixed(4)+','+lng.toFixed(4);
+        if(seen[key])return;seen[key]=true;
+        var parts=(x.display_name||'').split(',');
+        items.push({
+          lat:lat,lng:lng,
+          title:(parts[0]||'').trim()||'Без названия',
+          addr:parts.slice(1,4).join(',').trim()
+        });
+      });
+      if(!items.length){hideSuggestions();return}
+      searchSuggestions.innerHTML='';
+      items.slice(0,5).forEach(function(x){
+        var el=document.createElement('div');
+        el.className='search-suggestion';
+        el.innerHTML='<div class="search-suggestion-title">'+esc(x.title)+'</div>'
+          +'<div class="search-suggestion-addr">'+esc(x.addr||'')+'</div>';
+        el.addEventListener('mousedown',function(ev){
+          ev.preventDefault();
+          searchInput.value=x.title;
+          hideSuggestions();
+          goToSearch(x);
+          searchInput.blur();
+        });
+        el.addEventListener('touchstart',function(ev){
+          ev.preventDefault();
+          searchInput.value=x.title;
+          hideSuggestions();
+          goToSearch(x);
+          searchInput.blur();
+        },{passive:false});
+        searchSuggestions.appendChild(el);
+      });
+      searchSuggestions.classList.add('show');
+    })
+    .catch(function(){suggestBusy=false;hideSuggestions()});
+}
+searchInput.addEventListener('input',function(){
+  clearTimeout(suggestTimer);
+  var v=searchInput.value.trim();
+  if(v.length<4){hideSuggestions();return}
+  suggestTimer=setTimeout(doSuggest,700);
+});
+searchInput.addEventListener('blur',function(){
+  setTimeout(hideSuggestions,200);
+});
+searchInput.addEventListener('focus',function(){
+  if(searchInput.value.trim().length>=4)doSuggest();
+});
 // ===== КОНЕЦ ПОИСКА =====
 map.on('popupopen',function(){hintEl.classList.add('hidden')});
 map.on('click',function(e){var lat=e.latlng.lat,lng=e.latlng.lng;
@@ -949,7 +1022,6 @@ function savePothole(lat,lng,desc,sev){return fetch(SUPABASE_URL+'/rest/v1/'+TAB
 function saveSegment(coords,desc,sev){return fetch(SUPABASE_URL+'/rest/v1/'+TABLE_SEGMENTS,{method:'POST',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify({coords:coords,description:desc,severity:sev})}).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(d){return d[0]})}
 function saveWinter(lat,lng,type,desc){return fetch(SUPABASE_URL+'/rest/v1/'+TABLE_WINTER,{method:'POST',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify({lat:lat,lng:lng,type:type,description:desc})}).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(d){return d[0]})}
 function incrementConf(id,cur){return fetch(SUPABASE_URL+'/rest/v1/'+TABLE_POTHOLES+'?id=eq.'+id,{method:'PATCH',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify({confirmations:(cur||1)+1})}).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(d){return d[0]})}
-// ===== УДАЛЕНИЯ ЧЕРЕЗ RPC =====
 function reallyDeletePothole(id){
   var pwd=getAdminPassword();
   if(!pwd)return;
