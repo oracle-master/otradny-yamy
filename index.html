@@ -316,7 +316,7 @@ var DUPLICATE_DISTANCE=5,CAPITAL_RADIUS=30,REPAIR_LINE_RADIUS=20,BAD_REPAIR_DIST
 var OTRADNY_CENTER=[53.378,51.334],OTRADNY_ZOOM=14,CITY_SUFFIX=', Отрадный, Самарская область';
 var SHARE_URL='https://oracle-master.github.io/otradny-yamy/';
 var SHARE_TEXT='🗺️ Карта ям Отрадного — отмечай ямы, участки и зимние проблемы. Помоги сделать город лучше!';
-var CITY_RADIUS_KM=3,ADMIN_PASSWORD='фокс',ADMIN_HOLD_MS=14000;
+var CITY_RADIUS_KM=3,ADMIN_PASSWORD='fox',ADMIN_HOLD_MS=14000;
 var BAD_WORDS=['хуй','хуя','хуе','пизд','ебал','ебан','ебат','ебет','бляд','блять','блят','сука','сучк','мудак','мудил','залуп','долбоеб','долбоёб','пидор','пидар','гандон','шлюх','мразь','нах','наху','пиздец'];
 var BAD_PATTERNS=[/https?:\/\//i,/www\./i,/\.ru\b/i,/\.com\b/i,/\.net\b/i,/\.org\b/i,/vk\.com/i,/t\.me/i,/wa\.me/i,/telegram/i,/whatsapp/i,/казино/i,/ставк[аи]/i,/заработ[ао]к/i,/кредит/i,/займ/i];
 function checkCommentText(t){var l=t.toLowerCase();for(var i=0;i<BAD_WORDS.length;i++){if(l.indexOf(BAD_WORDS[i])!==-1)return '🚫 Нецензурная лексика запрещена'}for(var j=0;j<BAD_PATTERNS.length;j++){if(BAD_PATTERNS[j].test(t))return '🚫 Ссылки и реклама запрещены'}var lt=t.replace(/[^A-Za-zА-Яа-яЁё]/g,'');if(lt.length>10){var up=lt.replace(/[^A-ZА-ЯЁ]/g,'').length;if(up/lt.length>0.6)return '🚫 Слишком много заглавных букв'}return null}
