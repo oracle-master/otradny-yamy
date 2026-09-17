@@ -351,7 +351,6 @@ var SUPABASE_KEY='sb_publishable_QF7Ss8n3vhlbe70iJv4tKA_2dy8ijnS';
 var TABLE_POTHOLES='potholes',TABLE_SEGMENTS='road_segments',TABLE_WINTER='winter_reports',TABLE_REPAIRS='road_repairs';
 var DUPLICATE_DISTANCE=5,CAPITAL_RADIUS=30,REPAIR_LINE_RADIUS=20,BAD_REPAIR_DISTANCE=10,BAD_REPAIR_YEARS=2;
 var OTRADNY_CENTER=[53.378,51.334],OTRADNY_ZOOM=14,CITY_SUFFIX=', Отрадный, Самарская область';
-var YANDEX_API_KEY='5e4abcf1-5c2e-4e05-af21-93afd8b65093';
 var SHARE_URL='https://oracle-master.github.io/otradny-yamy/';
 var SHARE_TEXT='🗺️ Карта ям Отрадного — отмечай ямы, участки и зимние проблемы. Помоги сделать город лучше!';
 var CITY_RADIUS_KM=3,ADMIN_PASSWORD='fox',ADMIN_HOLD_MS=14000;
@@ -796,100 +795,46 @@ locateBtn.addEventListener('click',function(){
     {enableHighAccuracy:true,timeout:10000,maximumAge:60000}
   );
 });
-// ===== ПОИСК: Яндекс.Геокодер через прокси + fallback Nominatim =====
+// ===== ПОИСК: Nominatim напрямую (без прокси) =====
 var searchBusy=false;
-function yandexGeocodeViaProxy(q){
-  var nomUrl='https://geocode-maps.yandex.ru/1.x/?apikey='+YANDEX_API_KEY
-    +'&geocode='+encodeURIComponent(q)
-    +'&format=json&results=10&lang=ru_RU'
-    +'&ll='+OTRADNY_CENTER[1]+','+OTRADNY_CENTER[0]
-    +'&spn=0.3,0.3&rspn=1';
-  var proxyUrl='https://api.allorigins.win/raw?url='+encodeURIComponent(nomUrl);
-  return fetch(proxyUrl)
-    .then(function(r){if(!r.ok)throw new Error('proxy '+r.status);return r.json()})
-    .then(function(data){
-      var coll=data.response&&data.response.GeoObjectCollection;
-      var members=(coll&&coll.featureMember)||[];
-      var items=[],seen={};
-      members.forEach(function(m){
-        var g=m.GeoObject;
-        if(!g||!g.Point||!g.Point.pos)return;
-        var pp=g.Point.pos.split(' ');
-        var lng=parseFloat(pp[0]),lat=parseFloat(pp[1]);
-        if(isNaN(lat)||isNaN(lng))return;
-        var key=lat.toFixed(5)+','+lng.toFixed(5);
-        if(seen[key])return;
-        seen[key]=true;
-        var md=(g.metaDataProperty&&g.metaDataProperty.GeocoderMetaData)||{};
-        var addr=md.Address||{};
-        var comps=addr.Components||[];
-        var parts={};
-        comps.forEach(function(c){if(c.kind&&c.name)parts[c.kind]=c.name});
-        var title=g.name||md.text||'Без названия';
-        var addrParts=[];
-        if(parts.street)addrParts.push(parts.street+(parts.house?', '+parts.house:''));
-        else if(parts.house)addrParts.push(parts.house);
-        if(parts.locality)addrParts.push(parts.locality);
-        var addrStr=addrParts.join(', ')||'';
-        items.push({lat:lat,lng:lng,title:title,addr:addrStr});
-      });
-      return items;
-    });
-}
-function nominatimViaProxy(q){
-  var nomUrl='https://nominatim.openstreetmap.org/search?format=json&limit=8&accept-language=ru&addressdetails=1&q='+encodeURIComponent(q+CITY_SUFFIX);
-  var proxyUrl='https://api.allorigins.win/raw?url='+encodeURIComponent(nomUrl);
-  return fetch(proxyUrl)
-    .then(function(r){if(!r.ok)throw new Error('proxy '+r.status);return r.json()})
-    .then(function(list){
-      var items=[],seen={};
-      (list||[]).forEach(function(x){
-        var lat=+x.lat,lng=+x.lon;
-        if(isNaN(lat)||isNaN(lng))return;
-        var key=lat.toFixed(5)+','+lng.toFixed(5);
-        if(seen[key])return;
-        seen[key]=true;
-        var parts=(x.display_name||'').split(',');
-        var title=(parts[0]||'').trim()||'Без названия';
-        var addr=parts.slice(1,4).join(',').trim();
-        items.push({lat:lat,lng:lng,title:title,addr:addr});
-      });
-      return items;
-    });
-}
-function showSearchResults(items){
-  if(!items||!items.length){showToast('🤷 Ничего не найдено');return}
-  items=items.filter(function(x){return distM(x.lat,x.lng,OTRADNY_CENTER[0],OTRADNY_CENTER[1])<15000});
-  if(!items.length){showToast('🤷 Ничего рядом с Отрадным');return}
-  if(items.length===1){goToSearch(items[0]);return}
-  searchResults.innerHTML='';
-  items.forEach(function(x){
-    var el=document.createElement('div');
-    el.className='search-result-item';
-    el.innerHTML='<div class="search-result-name">'+esc(x.title)+'</div>'
-      +'<div class="search-result-address">'+esc(x.addr||'')+'</div>';
-    el.addEventListener('click',function(){searchModalOverlay.classList.remove('show');goToSearch(x)});
-    searchResults.appendChild(el);
-  });
-  searchModalOverlay.classList.add('show');
-}
 function doSearch(){
   var q=searchInput.value.trim();
   if(q.length<3){showToast('⚠️ Введите минимум 3 символа');searchInput.focus();return}
   if(searchBusy)return;
   searchBusy=true;searchInput.style.opacity='.7';
   showToast('🔍 Ищу...');
-  yandexGeocodeViaProxy(q)
-    .then(function(items){
-      if(items&&items.length){searchBusy=false;searchInput.style.opacity='1';showSearchResults(items);return}
-      throw new Error('yandex empty');
+  var url='https://nominatim.openstreetmap.org/search?format=json&limit=8&addressdetails=1&q='+encodeURIComponent(q+CITY_SUFFIX);
+  fetch(url,{headers:{'Accept-Language':'ru'}})
+    .then(function(r){if(!r.ok)throw new Error('nominatim '+r.status);return r.json()})
+    .then(function(list){
+      searchBusy=false;searchInput.style.opacity='1';
+      if(!list||!list.length){showToast('🤷 Ничего не найдено');return}
+      var items=[],seen={};
+      list.forEach(function(x){
+        var lat=+x.lat,lng=+x.lon;
+        if(isNaN(lat)||isNaN(lng))return;
+        var key=lat.toFixed(5)+','+lng.toFixed(5);
+        if(seen[key])return;seen[key]=true;
+        var parts=(x.display_name||'').split(',');
+        var title=(parts[0]||'').trim()||'Без названия';
+        var addr=parts.slice(1,4).join(',').trim();
+        items.push({lat:lat,lng:lng,title:title,addr:addr});
+      });
+      items=items.filter(function(x){return distM(x.lat,x.lng,OTRADNY_CENTER[0],OTRADNY_CENTER[1])<15000});
+      if(!items.length){showToast('🤷 Ничего рядом с Отрадным');return}
+      if(items.length===1){goToSearch(items[0]);return}
+      searchResults.innerHTML='';
+      items.forEach(function(x){
+        var el=document.createElement('div');
+        el.className='search-result-item';
+        el.innerHTML='<div class="search-result-name">'+esc(x.title)+'</div>'
+          +'<div class="search-result-address">'+esc(x.addr||'')+'</div>';
+        el.addEventListener('click',function(){searchModalOverlay.classList.remove('show');goToSearch(x)});
+        searchResults.appendChild(el);
+      });
+      searchModalOverlay.classList.add('show');
     })
-    .catch(function(e1){
-      console.warn('Яндекс не ответил, пробую Nominatim:',e1);
-      nominatimViaProxy(q)
-        .then(function(items2){searchBusy=false;searchInput.style.opacity='1';showSearchResults(items2||[])})
-        .catch(function(e2){console.error('Оба поисковика упали:',e1,e2);searchBusy=false;searchInput.style.opacity='1';showToast('⚠️ Поиск недоступен, попробуйте позже')});
-    });
+    .catch(function(e){console.error('Поиск:',e);searchBusy=false;searchInput.style.opacity='1';showToast('⚠️ Ошибка поиска, попробуйте позже')});
 }
 function goToSearch(x){
   if(searchMarker)map.removeLayer(searchMarker);
