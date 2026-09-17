@@ -37,7 +37,6 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,Blink
 .history-btn{background:rgba(106,90,205,.15);border:1px solid rgba(106,90,205,.4);color:#b8a8ff;width:36px;height:36px;border-radius:20px;font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
 .history-btn.active{background:rgba(106,90,205,.6);color:#fff;border-color:#6a5acd}
 .search-row{display:flex;gap:5px;align-items:center}
-/* ФИКС: обёртка для кликабельной лупы */
 .search-wrap{position:relative;flex:1;min-width:0;display:flex}
 .search-input{flex:1;background-color:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:8px 12px 8px 38px;color:#fff;font-size:13px;outline:none;min-width:0;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%238a80a8'><path d='M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z'/></svg>");background-repeat:no-repeat;background-position:12px center;background-size:18px 18px}
 .search-tap-area{position:absolute;left:0;top:0;bottom:0;width:40px;background:transparent;border:none;cursor:pointer;padding:0;z-index:2}
@@ -236,7 +235,6 @@ body.map-adding .leaflet-marker-icon,body.map-adding .leaflet-marker-shadow{poin
 <button class="draft-btn-save" id="draftSave">✅ Сохранить</button>
 </div>
 </div>
-<!-- ФИКС: добавили кнопку "✕ Отмена" в панель ремонта дороги -->
 <div class="draft-panel" id="repairPanel">
 <div class="draft-title">🛣️ Ремонт дороги</div>
 <div class="draft-subtitle" id="repairSubtitle">Ткните первую точку ремонта</div>
@@ -353,6 +351,7 @@ var SUPABASE_KEY='sb_publishable_QF7Ss8n3vhlbe70iJv4tKA_2dy8ijnS';
 var TABLE_POTHOLES='potholes',TABLE_SEGMENTS='road_segments',TABLE_WINTER='winter_reports',TABLE_REPAIRS='road_repairs';
 var DUPLICATE_DISTANCE=5,CAPITAL_RADIUS=30,REPAIR_LINE_RADIUS=20,BAD_REPAIR_DISTANCE=10,BAD_REPAIR_YEARS=2;
 var OTRADNY_CENTER=[53.378,51.334],OTRADNY_ZOOM=14,CITY_SUFFIX=', Отрадный, Самарская область';
+var YANDEX_API_KEY='5e4abcf1-5c2e-4e05-af21-93afd8b65093';
 var SHARE_URL='https://oracle-master.github.io/otradny-yamy/';
 var SHARE_TEXT='🗺️ Карта ям Отрадного — отмечай ямы, участки и зимние проблемы. Помоги сделать город лучше!';
 var CITY_RADIUS_KM=3,ADMIN_PASSWORD='fox',ADMIN_HOLD_MS=14000;
@@ -744,7 +743,6 @@ slushBtn.addEventListener('click',function(){startWinterMode('slush')});
 blockedBtn.addEventListener('click',function(){startWinterMode('blocked')});
 repairBtn.addEventListener('click',function(){if(addingMode){addingMode=false;addBtn.textContent='🕳️ Яма';addBtn.style.background='linear-gradient(135deg,#6a5acd 0%,#483d8b 100%)';document.body.classList.remove('map-adding')}if(segmentMode)cancelSegMode();if(winterAddType)cancelWinterMode();if(repairMode){cancelRepairMode();return}repairMode=true;repairPoints=[];repairMarkers=[];repairBtn.textContent='✕ Отмена';repairBtn.style.background='linear-gradient(135deg,#ff4757 0%,#c0392b 100%)';repairSubtitle.textContent='Ткните первую точку ремонта';repairPanel.classList.add('show');hintEl.classList.remove('hidden');hintEl.textContent='Ткните точки вдоль отремонтированного участка'});
 function cancelRepairMode(){repairMode=false;repairPoints=[];repairMarkers.forEach(function(m){map.removeLayer(m)});repairMarkers=[];if(repairDraftLine){map.removeLayer(repairDraftLine);repairDraftLine=null}repairDraftHighlight.forEach(function(h){map.removeLayer(h)});repairDraftHighlight=[];repairBtn.textContent='✅ Ремонт';repairBtn.style.background='linear-gradient(135deg,#2ecc71 0%,#27ae60 100%)';repairPanel.classList.remove('show');hintEl.classList.add('hidden')}
-// ФИКС: кнопка "Убрать" убирает точки, показывает предупреждение если точек нет
 repairUndo.addEventListener('click',function(){
   if(repairPoints.length===0){showToast('⚠️ Точек пока нет');return}
   repairPoints.pop();
@@ -755,7 +753,6 @@ repairUndo.addEventListener('click',function(){
   updateRepairHighlight();
   updateRepairSubtitle();
 });
-// ФИКС: новая кнопка "Отмена" — полный выход из режима ремонта
 repairExit.addEventListener('click',function(){
   cancelRepairMode();
   showToast('Отменено');
@@ -771,7 +768,6 @@ function createRepairLine(row){var ll=row.coords.map(function(c){return[c[0],c[1
 function makeRepairPopup(d){var len=0;for(var i=1;i<d.coords.length;i++)len+=distM(d.coords[i-1][0],d.coords[i-1][1],d.coords[i][0],d.coords[i][1]);var dateStr=d.created_at?formatDate(d.created_at):'';return '<div style="min-width:180px"><div style="font-size:11px;color:#2ecc71;margin-bottom:4px">🛣️ РЕМОНТ ДОРОГИ</div><b>'+esc(d.description||'Отремонтировано')+'</b><br><small style="color:#888">Длина: '+Math.round(len)+' м</small><br><small style="color:#888">Дата: '+dateStr+'</small><br><button onclick="deleteRepair('+d.id+')" style="margin-top:8px;background:#ff4757;color:#fff;border:none;padding:6px 12px;border-radius:15px;font-size:12px;cursor:pointer">🗑 Удалить</button></div>'}
 function finalizeRepair(coords,description){var nb=getPotholesNearLine(coords,REPAIR_LINE_RADIUS);saveRepairToCloud(coords,description).then(function(row){cancelRepairMode();var line=createRepairLine(row);repairs.push({id:row.id,coords:row.coords,description:row.description,created_at:row.created_at,line:line});var ids=nb.map(function(p){return p.id});var nowIso=new Date().toISOString();Promise.all(ids.map(function(id){return fetch(SUPABASE_URL+'/rest/v1/'+TABLE_POTHOLES+'?id=eq.'+id,{method:'PATCH',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify({status:'fixed',repair_type:'full',repair_id:row.id,fixed_at:nowIso})})})).then(function(){ids.forEach(function(id){var p=potholes.find(function(x){return x.id===id});if(p&&p.marker){p.status='fixed';p.repair_type='full';p.repair_id=row.id;p.fixed_at=nowIso;p.marker._popupData.status='fixed';p.marker._popupData.repair_type='full';p.marker._popupData.repair_id=row.id;p.marker._popupData.fixed_at=p.fixed_at;if(!historyMode)clusterGroup.removeLayer(p.marker);else p.marker.setIcon(getPotholeIcon(p,true))}});updateCounter();showToast('✅ Ремонт сохранён. Заделано ям: '+ids.length)}).catch(function(e){console.error(e);showToast('⚠️ Ошибка заделки ям')})}).catch(function(e){console.error(e);showToast('⚠️ Не удалось сохранить ремонт')})}
 window.deleteRepair=function(id){if(!confirm('Удалить ремонт? Ямы вернутся на карту.'))return;fetch(SUPABASE_URL+'/rest/v1/'+TABLE_POTHOLES+'?repair_id=eq.'+id,{method:'PATCH',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json'},body:JSON.stringify({status:'active',repair_type:null,repair_id:null,fixed_at:null})}).then(function(){return fetch(SUPABASE_URL+'/rest/v1/'+TABLE_REPAIRS+'?id=eq.'+id,{method:'DELETE',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}})}).then(function(){var idx=repairs.findIndex(function(r){return r.id===id});if(idx!==-1){map.removeLayer(repairs[idx].line);repairs.splice(idx,1)}showToast('🗑 Ремонт удалён');loadAll()}).catch(function(e){console.error(e);showToast('⚠️ Не удалось')})};
-// ===== ГЕОЛОКАЦИЯ =====
 locateBtn.addEventListener('click',function(){
   if(!navigator.geolocation){showToast('⚠️ Геолокация не поддерживается');return}
   locateBtn.style.opacity='.5';
@@ -800,7 +796,7 @@ locateBtn.addEventListener('click',function(){
     {enableHighAccuracy:true,timeout:10000,maximumAge:60000}
   );
 });
-// ===== ПОИСК (Nominatim + автоподстановка Отрадного) =====
+// ===== ПОИСК: Яндекс.Геокодер =====
 var searchBusy=false;
 function doSearch(){
   var q=searchInput.value.trim();
@@ -808,24 +804,51 @@ function doSearch(){
   if(searchBusy)return;
   searchBusy=true;searchInput.style.opacity='.7';
   showToast('🔍 Ищу...');
-  var url='https://nominatim.openstreetmap.org/search?format=json&limit=8&accept-language=ru&addressdetails=1&q='+encodeURIComponent(q+CITY_SUFFIX);
-  fetch(url,{headers:{'Accept':'application/json'}})
+  var url='https://geocode-maps.yandex.ru/1.x/?apikey='+YANDEX_API_KEY
+    +'&geocode='+encodeURIComponent(q)
+    +'&format=json&results=10&lang=ru_RU'
+    +'&ll='+OTRADNY_CENTER[1]+','+OTRADNY_CENTER[0]
+    +'&spn=0.15,0.15&rspn=1';
+  fetch(url)
     .then(function(r){if(!r.ok)throw new Error(r.status);return r.json()})
-    .then(function(list){
+    .then(function(data){
       searchBusy=false;searchInput.style.opacity='1';
-      if(!list||!list.length){showToast('🤷 Ничего не найдено');return}
-      list=list.filter(function(x){return distM(+x.lat,+x.lon,OTRADNY_CENTER[0],OTRADNY_CENTER[1])<15000});
-      if(!list.length){showToast('🤷 Ничего рядом с Отрадным');return}
-      if(list.length===1){goToSearch(list[0]);return}
+      var coll=data.response&&data.response.GeoObjectCollection;
+      var members=(coll&&coll.featureMember)||[];
+      if(!members.length){showToast('🤷 Ничего не найдено');return}
+      var items=[],seen={};
+      members.forEach(function(m){
+        var g=m.GeoObject;
+        if(!g||!g.Point||!g.Point.pos)return;
+        var pp=g.Point.pos.split(' ');
+        var lng=parseFloat(pp[0]),lat=parseFloat(pp[1]);
+        if(isNaN(lat)||isNaN(lng))return;
+        var key=lat.toFixed(5)+','+lng.toFixed(5);
+        if(seen[key])return;
+        seen[key]=true;
+        var md=(g.metaDataProperty&&g.metaDataProperty.GeocoderMetaData)||{};
+        var addr=md.Address||{};
+        var comps=addr.Components||[];
+        var parts={};
+        comps.forEach(function(c){if(c.kind&&c.name)parts[c.kind]=c.name});
+        var title=g.name||md.text||'Без названия';
+        var addrParts=[];
+        if(parts.street)addrParts.push(parts.street+(parts.house?', '+parts.house:''));
+        else if(parts.house)addrParts.push(parts.house);
+        if(parts.locality)addrParts.push(parts.locality);
+        var addrStr=addrParts.join(', ')||md.text||'';
+        items.push({lat:lat,lng:lng,title:title,addr:addrStr});
+      });
+      if(!items.length){showToast('🤷 Ничего не найдено');return}
+      items=items.filter(function(x){return distM(x.lat,x.lng,OTRADNY_CENTER[0],OTRADNY_CENTER[1])<15000});
+      if(!items.length){showToast('🤷 Ничего рядом с Отрадным');return}
+      if(items.length===1){goToSearch(items[0]);return}
       searchResults.innerHTML='';
-      list.forEach(function(x){
-        var parts=(x.display_name||'').split(',');
-        var title=(parts[0]||'').trim()||'Без названия';
-        var addr=parts.slice(1,4).join(',').trim();
+      items.forEach(function(x){
         var el=document.createElement('div');
         el.className='search-result-item';
-        el.innerHTML='<div class="search-result-name">'+esc(title)+'</div>'
-          +'<div class="search-result-address">'+esc(addr)+'</div>';
+        el.innerHTML='<div class="search-result-name">'+esc(x.title)+'</div>'
+          +'<div class="search-result-address">'+esc(x.addr)+'</div>';
         el.addEventListener('click',function(){searchModalOverlay.classList.remove('show');goToSearch(x)});
         searchResults.appendChild(el);
       });
@@ -834,13 +857,12 @@ function doSearch(){
     .catch(function(e){console.error(e);searchBusy=false;searchInput.style.opacity='1';showToast('⚠️ Ошибка поиска')});
 }
 function goToSearch(x){
-  var lat=+x.lat,lng=+x.lon;
   if(searchMarker)map.removeLayer(searchMarker);
-  searchMarker=L.marker([lat,lng]).addTo(map).bindPopup(esc(x.display_name||'Найдено')).openPopup();
-  map.flyTo([lat,lng],17,{duration:.8});
+  var label=[x.title,x.addr].filter(Boolean).join(' · ')||'Найдено';
+  searchMarker=L.marker([x.lat,x.lng]).addTo(map).bindPopup(esc(label)).openPopup();
+  map.flyTo([x.lat,x.lng],17,{duration:.8});
 }
 searchInput.addEventListener('keypress',function(e){if(e.key==='Enter'){e.preventDefault();doSearch()}});
-// ФИКС: клик по иконке лупы (прозрачная кнопка поверх)
 searchTapBtn.addEventListener('click',doSearch);
 searchCancel.addEventListener('click',function(){searchModalOverlay.classList.remove('show')});
 // ===== КОНЕЦ ПОИСКА =====
