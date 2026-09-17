@@ -353,7 +353,7 @@ var DUPLICATE_DISTANCE=5,CAPITAL_RADIUS=30,REPAIR_LINE_RADIUS=20,BAD_REPAIR_DIST
 var OTRADNY_CENTER=[53.378,51.334],OTRADNY_ZOOM=14,CITY_SUFFIX=', Отрадный, Самарская область';
 var SHARE_URL='https://oracle-master.github.io/otradny-yamy/';
 var SHARE_TEXT='🗺️ Карта ям Отрадного — отмечай ямы, участки и зимние проблемы. Помоги сделать город лучше!';
-var CITY_RADIUS_KM=3,ADMIN_PASSWORD='fox',ADMIN_HOLD_MS=14000;
+var CITY_RADIUS_KM=3,ADMIN_PASSWORD='1409Alex',ADMIN_HOLD_MS=14000;
 var BAD_WORDS=['хуй','хуя','хуе','пизд','ебал','ебан','ебат','ебет','бляд','блять','блят','сука','сучк','мудак','мудил','залуп','долбоеб','долбоёб','пидор','пидар','гандон','шлюх','мразь','нахуй','нахуя','пиздец'];
 var BAD_PATTERNS=[/https?:\/\//i,/www\./i,/\.ru\b/i,/\.com\b/i,/\.net\b/i,/\.org\b/i,/vk\.com/i,/t\.me/i,/wa\.me/i,/telegram/i,/whatsapp/i,/казино/i,/ставк[аи]/i,/заработ[ао]к/i,/кредит/i,/займ/i];
 function checkCommentText(t){
@@ -480,6 +480,33 @@ var dx=px-xx,dy=py-yy;
 return Math.sqrt(dx*dx+dy*dy);
 }
 function getPotholesNearLine(coords,radius){var r=[];potholes.forEach(function(p){if(p.status!=='active')return;for(var i=1;i<coords.length;i++){var d=distToSegment(p.lat,p.lng,coords[i-1][0],coords[i-1][1],coords[i][0],coords[i][1]);if(d<=radius){r.push(p);return}}});return r}
+// ===== RPC-ХЕЛПЕРЫ ДЛЯ АДМИНСКИХ УДАЛЕНИЙ =====
+function getAdminPassword(){
+  var p=sessionStorage.getItem('otradny_admin_pwd');
+  if(!p){
+    p=prompt('🔒 Введите пароль администратора:');
+    if(!p)return null;
+    sessionStorage.setItem('otradny_admin_pwd',p);
+  }
+  return p;
+}
+function clearAdminPassword(){sessionStorage.removeItem('otradny_admin_pwd')}
+function adminRpc(fn,args){
+  var pwd=getAdminPassword();
+  if(!pwd)return Promise.reject(new Error('cancelled'));
+  return fetch(SUPABASE_URL+'/rest/v1/rpc/'+fn,{
+    method:'POST',
+    headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json'},
+    body:JSON.stringify(args)
+  }).then(function(r){
+    if(!r.ok){
+      clearAdminPassword();
+      if(r.status===400||r.status===403||r.status===401)throw new Error('Неверный пароль');
+      throw new Error('Ошибка сервера: '+r.status);
+    }
+    return r.json();
+  });
+}
 function buildWinterPotholesLayer(){
   winterPotholesLayer.clearLayers();
   potholes.forEach(function(p){
@@ -604,7 +631,7 @@ function openPassword(){passwordInput.value='';passwordModalOverlay.classList.ad
 passwordCancel.addEventListener('click',function(){passwordModalOverlay.classList.remove('show');passwordInput.value=''});
 passwordOk.addEventListener('click',checkPass);
 passwordInput.addEventListener('keypress',function(e){if(e.key==='Enter')checkPass()});
-function checkPass(){var v=passwordInput.value.trim().toLowerCase();if(v===ADMIN_PASSWORD){passwordModalOverlay.classList.remove('show');passwordInput.value='';adminModalOverlay.classList.add('show')}else{showToast('⚠️ Неверный пароль');passwordInput.value=''}}
+function checkPass(){var v=passwordInput.value.trim();if(v===ADMIN_PASSWORD){passwordModalOverlay.classList.remove('show');passwordInput.value='';sessionStorage.setItem('otradny_admin_pwd',v);adminModalOverlay.classList.add('show')}else{showToast('⚠️ Неверный пароль');passwordInput.value=''}}
 adminClose.addEventListener('click',function(){adminModalOverlay.classList.remove('show')});
 adminExport.addEventListener('click',exportAll);
 function exportAll(){showToast('💾 Готовлю...');Promise.all([
@@ -613,9 +640,34 @@ fetch(SUPABASE_URL+'/rest/v1/'+TABLE_SEGMENTS+'?select=*',{headers:{'apikey':SUP
 fetch(SUPABASE_URL+'/rest/v1/'+TABLE_WINTER+'?select=*',{headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}}).then(function(r){return r.json()}),
 fetch(SUPABASE_URL+'/rest/v1/'+TABLE_REPAIRS+'?select=*',{headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}}).then(function(r){return r.json()})
 ]).then(function(d){var b={date:new Date().toISOString(),potholes:d[0],segments:d[1],winter_reports:d[2],road_repairs:d[3]};var blob=new Blob([JSON.stringify(b,null,2)],{type:'application/json'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='otradny-yamy-backup-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);showToast('✅ Скачано')}).catch(function(e){console.error(e);showToast('⚠️ Не удалось')})}
-adminDeletePotholes.addEventListener('click',function(){if(!confirm('Удалить ВСЕ ямы? Необратимо.'))return;fetch(SUPABASE_URL+'/rest/v1/'+TABLE_POTHOLES+'?id=not.is.null',{method:'DELETE',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}}).then(function(){clusterGroup.clearLayers();potholes=[];updateCounter();showToast('🗑 Удалено');adminModalOverlay.classList.remove('show')}).catch(function(e){console.error(e);showToast('⚠️ Не удалось')})});
-adminDeleteSegments.addEventListener('click',function(){if(!confirm('Удалить ВСЕ участки? Необратимо.'))return;fetch(SUPABASE_URL+'/rest/v1/'+TABLE_SEGMENTS+'?id=not.is.null',{method:'DELETE',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}}).then(function(){segments.forEach(function(s){if(s.line)map.removeLayer(s.line)});segments=[];updateCounter();showToast('🗑 Удалено');adminModalOverlay.classList.remove('show')}).catch(function(e){console.error(e);showToast('⚠️ Не удалось')})});
-adminDeleteWinter.addEventListener('click',function(){if(!confirm('Удалить ВСЕ зимние? Необратимо.'))return;fetch(SUPABASE_URL+'/rest/v1/'+TABLE_WINTER+'?id=not.is.null',{method:'DELETE',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}}).then(function(){winterGroup.clearLayers();winterReports=[];updateCounter();showToast('🗑 Удалено');adminModalOverlay.classList.remove('show')}).catch(function(e){console.error(e);showToast('⚠️ Не удалось')})});
+// АДМИН: удалить ВСЕ ямы через RPC
+adminDeletePotholes.addEventListener('click',function(){
+  if(!confirm('Удалить ВСЕ ямы? Необратимо.'))return;
+  var pwd=getAdminPassword();
+  if(!pwd)return;
+  adminRpc('admin_delete_all_potholes',{p_password:pwd}).then(function(){
+    clusterGroup.clearLayers();potholes=[];updateCounter();
+    showToast('🗑 Удалено');adminModalOverlay.classList.remove('show');
+  }).catch(function(e){console.error(e);showToast('⚠️ '+(e.message||'Не удалось'))});
+});
+adminDeleteSegments.addEventListener('click',function(){
+  if(!confirm('Удалить ВСЕ участки? Необратимо.'))return;
+  var pwd=getAdminPassword();
+  if(!pwd)return;
+  adminRpc('admin_delete_all_segments',{p_password:pwd}).then(function(){
+    segments.forEach(function(s){if(s.line)map.removeLayer(s.line)});segments=[];updateCounter();
+    showToast('🗑 Удалено');adminModalOverlay.classList.remove('show');
+  }).catch(function(e){console.error(e);showToast('⚠️ '+(e.message||'Не удалось'))});
+});
+adminDeleteWinter.addEventListener('click',function(){
+  if(!confirm('Удалить ВСЕ зимние? Необратимо.'))return;
+  var pwd=getAdminPassword();
+  if(!pwd)return;
+  adminRpc('admin_delete_all_winter',{p_password:pwd}).then(function(){
+    winterGroup.clearLayers();winterReports=[];updateCounter();
+    showToast('🗑 Удалено');adminModalOverlay.classList.remove('show');
+  }).catch(function(e){console.error(e);showToast('⚠️ '+(e.message||'Не удалось'))});
+});
 statsBtn.addEventListener('click',function(){renderStats();statsModalOverlay.classList.add('show')});
 statsClose.addEventListener('click',function(){statsModalOverlay.classList.remove('show')});
 function renderStats(){
@@ -766,7 +818,18 @@ function saveRepairToCloud(coords,description){return fetch(SUPABASE_URL+'/rest/
 function createRepairLine(row){var ll=row.coords.map(function(c){return[c[0],c[1]]});var line=L.polyline(ll,{color:'#2ecc71',weight:8,opacity:.85,lineCap:'round'});line._repairData=row;line.bindPopup(makeRepairPopup(row));line.addTo(map);return line}
 function makeRepairPopup(d){var len=0;for(var i=1;i<d.coords.length;i++)len+=distM(d.coords[i-1][0],d.coords[i-1][1],d.coords[i][0],d.coords[i][1]);var dateStr=d.created_at?formatDate(d.created_at):'';return '<div style="min-width:180px"><div style="font-size:11px;color:#2ecc71;margin-bottom:4px">🛣️ РЕМОНТ ДОРОГИ</div><b>'+esc(d.description||'Отремонтировано')+'</b><br><small style="color:#888">Длина: '+Math.round(len)+' м</small><br><small style="color:#888">Дата: '+dateStr+'</small><br><button onclick="deleteRepair('+d.id+')" style="margin-top:8px;background:#ff4757;color:#fff;border:none;padding:6px 12px;border-radius:15px;font-size:12px;cursor:pointer">🗑 Удалить</button></div>'}
 function finalizeRepair(coords,description){var nb=getPotholesNearLine(coords,REPAIR_LINE_RADIUS);saveRepairToCloud(coords,description).then(function(row){cancelRepairMode();var line=createRepairLine(row);repairs.push({id:row.id,coords:row.coords,description:row.description,created_at:row.created_at,line:line});var ids=nb.map(function(p){return p.id});var nowIso=new Date().toISOString();Promise.all(ids.map(function(id){return fetch(SUPABASE_URL+'/rest/v1/'+TABLE_POTHOLES+'?id=eq.'+id,{method:'PATCH',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify({status:'fixed',repair_type:'full',repair_id:row.id,fixed_at:nowIso})})})).then(function(){ids.forEach(function(id){var p=potholes.find(function(x){return x.id===id});if(p&&p.marker){p.status='fixed';p.repair_type='full';p.repair_id=row.id;p.fixed_at=nowIso;p.marker._popupData.status='fixed';p.marker._popupData.repair_type='full';p.marker._popupData.repair_id=row.id;p.marker._popupData.fixed_at=p.fixed_at;if(!historyMode)clusterGroup.removeLayer(p.marker);else p.marker.setIcon(getPotholeIcon(p,true))}});updateCounter();showToast('✅ Ремонт сохранён. Заделано ям: '+ids.length)}).catch(function(e){console.error(e);showToast('⚠️ Ошибка заделки ям')})}).catch(function(e){console.error(e);showToast('⚠️ Не удалось сохранить ремонт')})}
-window.deleteRepair=function(id){if(!confirm('Удалить ремонт? Ямы вернутся на карту.'))return;fetch(SUPABASE_URL+'/rest/v1/'+TABLE_POTHOLES+'?repair_id=eq.'+id,{method:'PATCH',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json'},body:JSON.stringify({status:'active',repair_type:null,repair_id:null,fixed_at:null})}).then(function(){return fetch(SUPABASE_URL+'/rest/v1/'+TABLE_REPAIRS+'?id=eq.'+id,{method:'DELETE',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}})}).then(function(){var idx=repairs.findIndex(function(r){return r.id===id});if(idx!==-1){map.removeLayer(repairs[idx].line);repairs.splice(idx,1)}showToast('🗑 Ремонт удалён');loadAll()}).catch(function(e){console.error(e);showToast('⚠️ Не удалось')})};
+// УДАЛЕНИЕ РЕМОНТА — через RPC
+window.deleteRepair=function(id){
+  if(!confirm('Удалить ремонт? Ямы вернутся на карту.'))return;
+  var pwd=getAdminPassword();
+  if(!pwd)return;
+  adminRpc('admin_delete_repair',{p_id:id,p_password:pwd}).then(function(){
+    var idx=repairs.findIndex(function(r){return r.id===id});
+    if(idx!==-1){map.removeLayer(repairs[idx].line);repairs.splice(idx,1)}
+    showToast('🗑 Ремонт удалён');
+    loadAll();
+  }).catch(function(e){console.error(e);showToast('⚠️ '+(e.message||'Не удалось'))});
+};
 locateBtn.addEventListener('click',function(){
   if(!navigator.geolocation){showToast('⚠️ Геолокация не поддерживается');return}
   locateBtn.style.opacity='.5';
@@ -886,12 +949,34 @@ function savePothole(lat,lng,desc,sev){return fetch(SUPABASE_URL+'/rest/v1/'+TAB
 function saveSegment(coords,desc,sev){return fetch(SUPABASE_URL+'/rest/v1/'+TABLE_SEGMENTS,{method:'POST',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify({coords:coords,description:desc,severity:sev})}).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(d){return d[0]})}
 function saveWinter(lat,lng,type,desc){return fetch(SUPABASE_URL+'/rest/v1/'+TABLE_WINTER,{method:'POST',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify({lat:lat,lng:lng,type:type,description:desc})}).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(d){return d[0]})}
 function incrementConf(id,cur){return fetch(SUPABASE_URL+'/rest/v1/'+TABLE_POTHOLES+'?id=eq.'+id,{method:'PATCH',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify({confirmations:(cur||1)+1})}).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(d){return d[0]})}
-function deletePotholeCloud(id){return fetch(SUPABASE_URL+'/rest/v1/'+TABLE_POTHOLES+'?id=eq.'+id,{method:'DELETE',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}})}
-function deleteSegmentCloud(id){return fetch(SUPABASE_URL+'/rest/v1/'+TABLE_SEGMENTS+'?id=eq.'+id,{method:'DELETE',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}})}
-function deleteWinterCloud(id){return fetch(SUPABASE_URL+'/rest/v1/'+TABLE_WINTER+'?id=eq.'+id,{method:'DELETE',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}})}
-function reallyDeletePothole(id){deletePotholeCloud(id).then(function(){var i=potholes.findIndex(function(p){return p.id===id});if(i!==-1){clusterGroup.removeLayer(potholes[i].marker);potholes.splice(i,1)}updateCounter();showToast('🗑 Яма удалена')}).catch(function(e){console.error(e);showToast('⚠️ Не удалось')})}
-function reallyDeleteSegment(id){deleteSegmentCloud(id).then(function(){var i=segments.findIndex(function(s){return s.id===id});if(i!==-1){map.removeLayer(segments[i].line);segments.splice(i,1)}updateCounter();showToast('🗑 Участок удалён')}).catch(function(e){console.error(e);showToast('⚠️ Не удалось')})}
-function reallyDeleteWinter(id){deleteWinterCloud(id).then(function(){var i=winterReports.findIndex(function(w){return w.id===id});if(i!==-1){winterGroup.removeLayer(winterReports[i].marker);winterReports.splice(i,1)}updateCounter();showToast('🗑 Удалено')}).catch(function(e){console.error(e);showToast('⚠️ Не удалось')})}
+// ===== УДАЛЕНИЯ ЧЕРЕЗ RPC =====
+function reallyDeletePothole(id){
+  var pwd=getAdminPassword();
+  if(!pwd)return;
+  adminRpc('admin_delete_pothole',{p_id:id,p_password:pwd}).then(function(){
+    var i=potholes.findIndex(function(p){return p.id===id});
+    if(i!==-1){clusterGroup.removeLayer(potholes[i].marker);potholes.splice(i,1)}
+    updateCounter();showToast('🗑 Яма удалена');
+  }).catch(function(e){console.error(e);showToast('⚠️ '+(e.message||'Не удалось'))});
+}
+function reallyDeleteSegment(id){
+  var pwd=getAdminPassword();
+  if(!pwd)return;
+  adminRpc('admin_delete_segment',{p_id:id,p_password:pwd}).then(function(){
+    var i=segments.findIndex(function(s){return s.id===id});
+    if(i!==-1){map.removeLayer(segments[i].line);segments.splice(i,1)}
+    updateCounter();showToast('🗑 Участок удалён');
+  }).catch(function(e){console.error(e);showToast('⚠️ '+(e.message||'Не удалось'))});
+}
+function reallyDeleteWinter(id){
+  var pwd=getAdminPassword();
+  if(!pwd)return;
+  adminRpc('admin_delete_winter',{p_id:id,p_password:pwd}).then(function(){
+    var i=winterReports.findIndex(function(w){return w.id===id});
+    if(i!==-1){winterGroup.removeLayer(winterReports[i].marker);winterReports.splice(i,1)}
+    updateCounter();showToast('🗑 Удалено');
+  }).catch(function(e){console.error(e);showToast('⚠️ '+(e.message||'Не удалось'))});
+}
 function getSevIcon(s,out){var c='pothole-marker ',sz,e='';if(s===1){c+='pothole-minor';sz=16}else if(s===2){c+='pothole-medium';sz=22}else{c+='pothole-major';sz=28;e='💥'}if(out)c+=' pothole-outside';return L.divIcon({className:'',html:'<div class="'+c+'">'+e+'</div>',iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]})}
 function getPotholeIcon(p,showFixed){var out=!isInCity(p.lat,p.lng);
 if(p.status==='fixed'){
