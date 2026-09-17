@@ -375,6 +375,26 @@ function checkCommentText(t){
   if(lt.length>10){var up=lt.replace(/[^A-ZА-ЯЁ]/g,'').length;if(up/lt.length>0.6)return '🚫 Слишком много заглавных букв'}
   return null;
 }
+// ===== ТРАНСФОРМАЦИЯ ЗАПРОСА (синонимы для школ и POI) =====
+function normalizeQuery(q){
+  var ql=q.toLowerCase().trim();
+  var m;
+  // «школа N», «сош N», «школа №N», «школа номер N», «школа-n»
+  m=ql.match(/^(?:мбоу\s+)?(?:сош|школа|шк|сш|средняя\s+школа)\s*[№#]?\s*(\d+)/i);
+  if(m){return 'СОШ №'+m[1];}
+  // «сош №10» с явным номером
+  m=ql.match(/^(?:мбоу\s+)?сош\s+[№#]\s*(\d+)/i);
+  if(m){return 'СОШ №'+m[1];}
+  // «гимназия N» → «Гимназия N»
+  m=ql.match(/^гимназия\s*[№#]?\s*(\d+)/i);
+  if(m){return 'Гимназия №'+m[1];}
+  // «дши» / «школа искусств» / «музыкалка»
+  if(/^(дши|дмш|школа\s+искусств|музыкальн|музыкалк|художк)/i.test(ql)){return 'Детская школа искусств';}
+  // «детсад N», «детский сад N», «дс N»
+  m=ql.match(/^(?:детсад|детский\s+сад|дс|доу)\s*[№#]?\s*(\d+)/i);
+  if(m){return 'Детский сад №'+m[1];}
+  return q;
+}
 var map=L.map('map',{zoomControl:false}).setView(OTRADNY_CENTER,OTRADNY_ZOOM);
 L.control.zoom({position:'bottomright'}).addTo(map);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
@@ -863,7 +883,7 @@ locateBtn.addEventListener('click',function(){
     {enableHighAccuracy:true,timeout:10000,maximumAge:60000}
   );
 });
-// ===== ПОИСК: Nominatim напрямую (без прокси) =====
+// ===== ПОИСК: Nominatim напрямую + синонимы =====
 var searchBusy=false;
 function doSearch(){
   var q=searchInput.value.trim();
@@ -872,7 +892,8 @@ function doSearch(){
   searchBusy=true;searchInput.style.opacity='.7';
   hideSuggestions();
   showToast('🔍 Ищу...');
-  var url='https://nominatim.openstreetmap.org/search?format=json&limit=8&addressdetails=1&q='+encodeURIComponent(q+CITY_SUFFIX);
+  var normalized=normalizeQuery(q);
+  var url='https://nominatim.openstreetmap.org/search?format=json&limit=8&addressdetails=1&q='+encodeURIComponent(normalized+CITY_SUFFIX);
   fetch(url,{headers:{'Accept-Language':'ru'}})
     .then(function(r){if(!r.ok)throw new Error('nominatim '+r.status);return r.json()})
     .then(function(list){
@@ -914,7 +935,7 @@ function goToSearch(x){
 searchInput.addEventListener('keypress',function(e){if(e.key==='Enter'){e.preventDefault();doSearch()}});
 searchTapBtn.addEventListener('click',doSearch);
 searchCancel.addEventListener('click',function(){searchModalOverlay.classList.remove('show')});
-// ===== АВТОДОПОЛНЕНИЕ =====
+// ===== АВТОДОПОЛНЕНИЕ (с синонимами) =====
 var suggestTimer=null,suggestBusy=false;
 function hideSuggestions(){searchSuggestions.classList.remove('show');searchSuggestions.innerHTML=''}
 function doSuggest(){
@@ -922,7 +943,8 @@ function doSuggest(){
   if(q.length<4){hideSuggestions();return}
   if(suggestBusy)return;
   suggestBusy=true;
-  var url='https://nominatim.openstreetmap.org/search?format=json&limit=6&addressdetails=1&q='+encodeURIComponent(q+CITY_SUFFIX);
+  var normalized=normalizeQuery(q);
+  var url='https://nominatim.openstreetmap.org/search?format=json&limit=6&addressdetails=1&q='+encodeURIComponent(normalized+CITY_SUFFIX);
   fetch(url,{headers:{'Accept-Language':'ru'}})
     .then(function(r){return r.ok?r.json():[]})
     .then(function(list){
