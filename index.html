@@ -103,6 +103,13 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,Blink
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
 .hint{position:absolute;top:150px;left:50%;transform:translateX(-50%);z-index:999;background:rgba(26,26,46,.9);color:#e0d8f0;padding:8px 16px;border-radius:20px;font-size:12px;border:1px solid rgba(160,152,192,.3);transition:opacity .5s;white-space:nowrap}
 .hint.hidden{opacity:0;pointer-events:none}
+/* ===== БАННЕР ТЕХНИЧЕСКИХ РАБОТ ===== */
+.maintenance-overlay{position:fixed;top:0;left:0;right:0;bottom:0;z-index:9998;pointer-events:none;display:none;align-items:center;justify-content:center;background:rgba(26,26,46,.55);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
+.maintenance-overlay.show{display:flex}
+.maintenance-box{background:rgba(26,26,46,.96);color:#fff;padding:28px 40px;border-radius:24px;border:2px solid rgba(241,196,15,.6);box-shadow:0 0 60px rgba(0,0,0,.9),0 0 30px rgba(241,196,15,.3);text-align:center;max-width:90%;pointer-events:auto}
+.maintenance-icon{font-size:52px;line-height:1;margin-bottom:12px;display:block}
+.maintenance-title{font-size:22px;font-weight:800;color:#ffe066;margin-bottom:10px;letter-spacing:.5px}
+.maintenance-text{font-size:14px;color:#e0d8f0;line-height:1.5;max-width:340px}
 .draft-panel{position:absolute;bottom:0;left:0;right:0;z-index:1500;background:linear-gradient(180deg,#1a1a2e 0%,#0f0f1e 100%);color:#fff;padding:16px 16px calc(16px + env(safe-area-inset-bottom));box-shadow:0 -6px 30px rgba(0,0,0,.6);transform:translateY(100%);transition:transform .3s}
 .draft-panel.show{transform:translateY(0)}
 .draft-title{font-size:15px;font-weight:700;margin-bottom:4px;color:#ffa502}
@@ -165,6 +172,16 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,Blink
 .warn-hint{background:rgba(241,196,15,.12);border:1px solid rgba(241,196,15,.5);border-radius:12px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#ffe48a;line-height:1.4;text-align:center}
 .admin-hint{background:rgba(231,76,60,.15);border:1px solid rgba(231,76,60,.5);border-radius:12px;padding:12px 14px;margin-bottom:14px;font-size:13px;color:#ffb8b8;text-align:center}
 .admin-user{background:rgba(46,204,113,.15);border:1px solid rgba(46,204,113,.5);border-radius:12px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#a8e8bb;text-align:center;word-break:break-all}
+/* ===== ТУМБЛЕР ТЕХРАБОТ ===== */
+.admin-toggle-row{display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(241,196,15,.12);border:1px solid rgba(241,196,15,.5);border-radius:12px;padding:12px 14px;margin-bottom:14px}
+.admin-toggle-label{flex:1;font-size:13px;color:#ffe48a;font-weight:600;line-height:1.3}
+.admin-toggle-label small{display:block;font-size:10px;color:#a098c0;font-weight:400;margin-top:2px}
+.toggle-switch{position:relative;display:inline-block;width:52px;height:28px;flex-shrink:0}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:rgba(120,120,120,.5);border-radius:28px;transition:.3s}
+.toggle-slider:before{position:absolute;content:"";height:22px;width:22px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s}
+.toggle-switch input:checked+.toggle-slider{background:#e74c3c}
+.toggle-switch input:checked+.toggle-slider:before{transform:translateX(24px)}
 .stats-section{background:rgba(255,255,255,.05);border:1px solid rgba(160,152,192,.2);border-radius:14px;padding:14px;margin-bottom:12px}
 .stats-section-title{font-size:14px;font-weight:700;color:#f0e8ff;margin-bottom:10px}
 .stats-line{display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:13px;color:#c0b8d8;border-bottom:1px dashed rgba(160,152,192,.15);gap:10px}
@@ -205,6 +222,13 @@ body.map-adding .leaflet-marker-icon,body.map-adding .leaflet-marker-shadow{poin
 </div>
 <div class="hint" id="hint">Нажми «🕳️ Яма» и ткни в карту</div>
 <div id="map"></div>
+<div class="maintenance-overlay" id="maintenanceOverlay">
+<div class="maintenance-box">
+<span class="maintenance-icon">🛠</span>
+<div class="maintenance-title">Технические работы</div>
+<div class="maintenance-text" id="maintenanceText">Скоро вернёмся! Мы обновляем карту.</div>
+</div>
+</div>
 <div class="map-btns-right" id="mapBtnsRight">
 <button class="map-toggle-btn show" id="fixedToggleBtn">✅ Отремонтировано (0)</button>
 <button class="map-toggle-btn" id="potholesToggleBtn">🕳️ Ямы (0)</button>
@@ -349,9 +373,20 @@ body.map-adding .leaflet-marker-icon,body.map-adding .leaflet-marker-shadow{poin
 <div class="modal-overlay" id="adminModalOverlay"><div class="modal">
 <div class="modal-title">🔒 Админ-режим</div>
 <div class="admin-user" id="adminUserInfo">Вы вошли как ...</div>
+<div class="admin-toggle-row">
+<label class="admin-toggle-label">
+🛠 Режим «Технические работы»
+<small>Все пользователи увидят баннер поверх карты</small>
+</label>
+<label class="toggle-switch">
+<input type="checkbox" id="maintenanceToggle">
+<span class="toggle-slider"></span>
+</label>
+</div>
 <div class="admin-hint"><b>⚠️ Осторожно!</b><br>Действия необратимы.</div>
 <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
 <button class="modal-btn-ok" id="adminExport" style="width:100%">💾 Скачать архив (JSON)</button>
+<button class="modal-btn-danger" id="adminDeleteAll" style="width:100%;background:linear-gradient(135deg,#7b241c 0%,#4a1810 100%);border:2px solid #e74c3c">💥 УДАЛИТЬ ВСЁ</button>
 <button class="modal-btn-danger" id="adminDeletePotholes" style="width:100%">🗑 Удалить ВСЕ ямы</button>
 <button class="modal-btn-danger" id="adminDeleteSegments" style="width:100%">🗑 Удалить ВСЕ участки</button>
 <button class="modal-btn-danger" id="adminDeleteWinter" style="width:100%">🗑 Удалить ВСЕ зимние</button>
@@ -365,7 +400,7 @@ body.map-adding .leaflet-marker-icon,body.map-adding .leaflet-marker-shadow{poin
 <script>
 var SUPABASE_URL='https://xmajdholmfhuizavwhmr.supabase.co';
 var SUPABASE_KEY='sb_publishable_QF7Ss8n3vhlbe70iJv4tKA_2dy8ijnS';
-var TABLE_POTHOLES='potholes',TABLE_SEGMENTS='road_segments',TABLE_WINTER='winter_reports',TABLE_REPAIRS='road_repairs';
+var TABLE_POTHOLES='potholes',TABLE_SEGMENTS='road_segments',TABLE_WINTER='winter_reports',TABLE_REPAIRS='road_repairs',TABLE_SETTINGS='app_settings';
 var DUPLICATE_DISTANCE=5,CAPITAL_RADIUS=30,REPAIR_LINE_RADIUS=20,BAD_REPAIR_DISTANCE=10,BAD_REPAIR_YEARS=2;
 var OTRADNY_CENTER=[53.378,51.334],OTRADNY_ZOOM=14,CITY_SUFFIX=', Отрадный, Самарская область';
 var SHARE_URL='https://oracle-master.github.io/otradny-yamy/';
@@ -384,7 +419,6 @@ function checkCommentText(t){
   if(lt.length>10){var up=lt.replace(/[^A-ZА-ЯЁ]/g,'').length;if(up/lt.length>0.6)return '🚫 Слишком много заглавных букв'}
   return null;
 }
-// ===== АВТОРИЗАЦИЯ SUPABASE =====
 var AUTH_KEY='otradny_auth_v1';
 var authData=null;
 function loadAuth(){try{var s=localStorage.getItem(AUTH_KEY);if(!s)return null;var d=JSON.parse(s);if(!d||!d.access_token)return null;return d}catch(e){return null}}
@@ -402,12 +436,7 @@ function refreshAuth(){
     if(!r.ok)throw new Error('refresh '+r.status);
     return r.json();
   }).then(function(d){
-    authData={
-      access_token:d.access_token,
-      refresh_token:d.refresh_token,
-      expires_at:Math.floor(Date.now()/1000)+(d.expires_in||3600),
-      user:d.user
-    };
+    authData={access_token:d.access_token,refresh_token:d.refresh_token,expires_at:Math.floor(Date.now()/1000)+(d.expires_in||3600),user:d.user};
     saveAuth(authData);
     updateBadgeForAuth();
     return authData;
@@ -430,12 +459,7 @@ function doLogin(email,password){
     }
     return r.json();
   }).then(function(d){
-    authData={
-      access_token:d.access_token,
-      refresh_token:d.refresh_token,
-      expires_at:Math.floor(Date.now()/1000)+(d.expires_in||3600),
-      user:d.user
-    };
+    authData={access_token:d.access_token,refresh_token:d.refresh_token,expires_at:Math.floor(Date.now()/1000)+(d.expires_in||3600),user:d.user};
     saveAuth(authData);
     updateBadgeForAuth();
     return authData;
@@ -445,16 +469,11 @@ function doLogout(){
   var t=authData&&authData.access_token;
   clearAuth();
   updateBadgeForAuth();
-  if(t){
-    fetch(SUPABASE_URL+'/auth/v1/logout',{method:'POST',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+t}}).catch(function(){});
-  }
+  if(t){fetch(SUPABASE_URL+'/auth/v1/logout',{method:'POST',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+t}}).catch(function(){});}
 }
 function authDelete(table,id){
   return ensureFreshAuth().then(function(a){
-    return fetch(SUPABASE_URL+'/rest/v1/'+table+'?id=eq.'+id,{
-      method:'DELETE',
-      headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+a.access_token}
-    });
+    return fetch(SUPABASE_URL+'/rest/v1/'+table+'?id=eq.'+id,{method:'DELETE',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+a.access_token}});
   }).then(function(r){
     if(r.status===401||r.status===403){clearAuth();updateBadgeForAuth();throw new Error('Сессия истекла, войдите снова');}
     if(!r.ok)throw new Error('Ошибка ('+r.status+')');
@@ -463,9 +482,19 @@ function authDelete(table,id){
 }
 function authDeleteAll(table){
   return ensureFreshAuth().then(function(a){
-    return fetch(SUPABASE_URL+'/rest/v1/'+table+'?id=not.is.null',{
-      method:'DELETE',
-      headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+a.access_token}
+    return fetch(SUPABASE_URL+'/rest/v1/'+table+'?id=not.is.null',{method:'DELETE',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+a.access_token}});
+  }).then(function(r){
+    if(r.status===401||r.status===403){clearAuth();updateBadgeForAuth();throw new Error('Сессия истекла, войдите снова');}
+    if(!r.ok)throw new Error('Ошибка ('+r.status+')');
+    return true;
+  });
+}
+function authUpdateSetting(key,value){
+  return ensureFreshAuth().then(function(a){
+    return fetch(SUPABASE_URL+'/rest/v1/'+TABLE_SETTINGS+'?key=eq.'+encodeURIComponent(key),{
+      method:'PATCH',
+      headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+a.access_token,'Content-Type':'application/json','Prefer':'return=representation'},
+      body:JSON.stringify({value:value,updated_at:new Date().toISOString()})
     });
   }).then(function(r){
     if(r.status===401||r.status===403){clearAuth();updateBadgeForAuth();throw new Error('Сессия истекла, войдите снова');}
@@ -474,10 +503,30 @@ function authDeleteAll(table){
   });
 }
 function updateBadgeForAuth(){
-  if(isLoggedIn()){
-    headerBadge.classList.add('admin');
+  if(isLoggedIn()){headerBadge.classList.add('admin');}else{headerBadge.classList.remove('admin');}
+}
+// ===== ТЕХРАБОТЫ =====
+var maintenanceState={on:false,message:''};
+function loadMaintenance(){
+  var url=SUPABASE_URL+'/rest/v1/'+TABLE_SETTINGS+'?select=key,value&key=in.(maintenance_mode,maintenance_message)';
+  return fetch(url,{headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}})
+    .then(function(r){return r.ok?r.json():[]})
+    .then(function(rows){
+      (rows||[]).forEach(function(row){
+        if(row.key==='maintenance_mode')maintenanceState.on=(row.value==='on');
+        if(row.key==='maintenance_message')maintenanceState.message=row.value||'';
+      });
+      applyMaintenanceUI();
+    })
+    .catch(function(e){console.warn('settings load fail',e)});
+}
+function applyMaintenanceUI(){
+  var overlay=$('maintenanceOverlay');
+  if(maintenanceState.on){
+    if(maintenanceState.message)$('maintenanceText').textContent=maintenanceState.message;
+    overlay.classList.add('show');
   }else{
-    headerBadge.classList.remove('admin');
+    overlay.classList.remove('show');
   }
 }
 var map=L.map('map',{zoomControl:false}).setView(OTRADNY_CENTER,OTRADNY_ZOOM);
@@ -523,7 +572,7 @@ var shareModalOverlay=$('shareModalOverlay'),shareCancel=$('shareCancel');
 var statsModalOverlay=$('statsModalOverlay'),statsContent=$('statsContent'),statsClose=$('statsClose');
 var historyModalOverlay=$('historyModalOverlay'),historyContent=$('historyContent'),historyClose=$('historyClose');
 var authModalOverlay=$('authModalOverlay'),authEmail=$('authEmail'),authPassword=$('authPassword'),authOk=$('authOk'),authCancel=$('authCancel'),authError=$('authError');
-var adminModalOverlay=$('adminModalOverlay'),adminClose=$('adminClose'),adminExport=$('adminExport'),adminDeletePotholes=$('adminDeletePotholes'),adminDeleteSegments=$('adminDeleteSegments'),adminDeleteWinter=$('adminDeleteWinter'),adminLogout=$('adminLogout'),adminUserInfo=$('adminUserInfo');
+var adminModalOverlay=$('adminModalOverlay'),adminClose=$('adminClose'),adminExport=$('adminExport'),adminDeletePotholes=$('adminDeletePotholes'),adminDeleteSegments=$('adminDeleteSegments'),adminDeleteWinter=$('adminDeleteWinter'),adminDeleteAll=$('adminDeleteAll'),adminLogout=$('adminLogout'),adminUserInfo=$('adminUserInfo'),maintenanceToggle=$('maintenanceToggle');
 var seasonSummer=$('seasonSummer'),seasonWinter=$('seasonWinter');
 var counterSummer=$('counterSummer'),counterWinter=$('counterWinter');
 var buttonsSummer=$('buttonsSummer'),buttonsWinter=$('buttonsWinter'),buttonsWinter2=$('buttonsWinter2');
@@ -696,10 +745,7 @@ window.gotoFromHistory=function(type,id,lat,lng,status){
     else if(type==='segment')item=segments.find(function(x){return x.id===id});
     else if(type==='winter')item=winterReports.find(function(x){return x.id===id});
     else if(type==='repair')item=repairs.find(function(x){return x.id===id});
-    if(item){
-      if(item.marker)item.marker.openPopup();
-      else if(item.line)item.line.openPopup();
-    }
+    if(item){if(item.marker)item.marker.openPopup();else if(item.line)item.line.openPopup();}
   },900);
 };
 function refreshPotholeVisibility(){
@@ -716,19 +762,13 @@ headerBadge.addEventListener('touchmove',stopAdmin);headerBadge.addEventListener
 headerBadge.addEventListener('mousedown',startAdmin);headerBadge.addEventListener('mouseup',stopAdmin);
 headerBadge.addEventListener('mouseleave',stopAdmin);
 function openAdmin(){
-  if(isLoggedIn()){
-    openAdminPanel();
-  }else{
-    authEmail.value='';
-    authPassword.value='';
-    hideAuthError();
-    authModalOverlay.classList.add('show');
-    setTimeout(function(){authEmail.focus()},100);
-  }
+  if(isLoggedIn()){openAdminPanel();}
+  else{authEmail.value='';authPassword.value='';hideAuthError();authModalOverlay.classList.add('show');setTimeout(function(){authEmail.focus()},100);}
 }
 function openAdminPanel(){
   var email=(authData&&authData.user&&authData.user.email)||'';
   adminUserInfo.textContent='Вы вошли как: '+email;
+  maintenanceToggle.checked=maintenanceState.on;
   adminModalOverlay.classList.add('show');
 }
 authCancel.addEventListener('click',function(){authModalOverlay.classList.remove('show');hideAuthError()});
@@ -752,12 +792,22 @@ function doAuthLogin(){
     showAuthError(e.message||'Не удалось войти');
   });
 }
-adminClose.addEventListener('click',function(){adminModalOverlay.classList.remove('show')});
-adminLogout.addEventListener('click',function(){
-  doLogout();
-  adminModalOverlay.classList.remove('show');
-  showToast('🚪 Вы вышли');
+maintenanceToggle.addEventListener('change',function(){
+  var newState=maintenanceToggle.checked?'on':'off';
+  var label=maintenanceToggle.checked?'Включить техработы для всех?':'Выключить техработы?';
+  if(!confirm(label)){maintenanceToggle.checked=!maintenanceToggle.checked;return}
+  authUpdateSetting('maintenance_mode',newState).then(function(){
+    maintenanceState.on=(newState==='on');
+    applyMaintenanceUI();
+    showToast(newState==='on'?'🛠 Техработы включены':'✅ Техработы выключены');
+  }).catch(function(e){
+    console.error(e);
+    maintenanceToggle.checked=!maintenanceToggle.checked;
+    showToast('⚠️ '+(e.message||'Не удалось'));
+  });
 });
+adminClose.addEventListener('click',function(){adminModalOverlay.classList.remove('show')});
+adminLogout.addEventListener('click',function(){doLogout();adminModalOverlay.classList.remove('show');showToast('🚪 Вы вышли');});
 adminExport.addEventListener('click',exportAll);
 function exportAll(){showToast('💾 Готовлю...');Promise.all([
 fetch(SUPABASE_URL+'/rest/v1/'+TABLE_POTHOLES+'?select=*',{headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}}).then(function(r){return r.json()}),
@@ -765,25 +815,51 @@ fetch(SUPABASE_URL+'/rest/v1/'+TABLE_SEGMENTS+'?select=*',{headers:{'apikey':SUP
 fetch(SUPABASE_URL+'/rest/v1/'+TABLE_WINTER+'?select=*',{headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}}).then(function(r){return r.json()}),
 fetch(SUPABASE_URL+'/rest/v1/'+TABLE_REPAIRS+'?select=*',{headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}}).then(function(r){return r.json()})
 ]).then(function(d){var b={date:new Date().toISOString(),potholes:d[0],segments:d[1],winter_reports:d[2],road_repairs:d[3]};var blob=new Blob([JSON.stringify(b,null,2)],{type:'application/json'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='otradny-yamy-backup-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);showToast('✅ Скачано')}).catch(function(e){console.error(e);showToast('⚠️ Не удалось')})}
+// ФИКС: админка больше НЕ закрывается после удаления — можно чистить одну за одной
 adminDeletePotholes.addEventListener('click',function(){
   if(!confirm('Удалить ВСЕ ямы? Необратимо.'))return;
   authDeleteAll(TABLE_POTHOLES).then(function(){
-    clusterGroup.clearLayers();potholes=[];updateCounter();
-    showToast('🗑 Удалено');adminModalOverlay.classList.remove('show');
+    clusterGroup.clearLayers();potholes=[];
+    if(winterPotholesShown)buildWinterPotholesLayer();
+    updateCounter();
+    showToast('🗑 Ямы удалены');
   }).catch(function(e){console.error(e);showToast('⚠️ '+(e.message||'Не удалось'))});
 });
 adminDeleteSegments.addEventListener('click',function(){
   if(!confirm('Удалить ВСЕ участки? Необратимо.'))return;
   authDeleteAll(TABLE_SEGMENTS).then(function(){
-    segments.forEach(function(s){if(s.line)map.removeLayer(s.line)});segments=[];updateCounter();
-    showToast('🗑 Удалено');adminModalOverlay.classList.remove('show');
+    segments.forEach(function(s){if(s.line)map.removeLayer(s.line)});segments=[];
+    if(winterPotholesShown)buildWinterPotholesLayer();
+    updateCounter();
+    showToast('🗑 Участки удалены');
   }).catch(function(e){console.error(e);showToast('⚠️ '+(e.message||'Не удалось'))});
 });
 adminDeleteWinter.addEventListener('click',function(){
   if(!confirm('Удалить ВСЕ зимние? Необратимо.'))return;
   authDeleteAll(TABLE_WINTER).then(function(){
     winterGroup.clearLayers();winterReports=[];updateCounter();
-    showToast('🗑 Удалено');adminModalOverlay.classList.remove('show');
+    showToast('🗑 Зимние удалены');
+  }).catch(function(e){console.error(e);showToast('⚠️ '+(e.message||'Не удалось'))});
+});
+// НОВОЕ: удалить ВСЁ — снести все 4 таблицы разом
+adminDeleteAll.addEventListener('click',function(){
+  if(!confirm('💥 УДАЛИТЬ ВСЁ?\n\nБудут удалены:\n• Все ямы\n• Все участки\n• Все зимние\n• Все ремонты\n\nЭто действие НЕЛЬЗЯ отменить!'))return;
+  if(!confirm('ТОЧНО уверены? Это финальное предупреждение.'))return;
+  showToast('💥 Чистим базу...');
+  Promise.all([
+    authDeleteAll(TABLE_REPAIRS),
+    authDeleteAll(TABLE_SEGMENTS),
+    authDeleteAll(TABLE_WINTER),
+    authDeleteAll(TABLE_POTHOLES)
+  ]).then(function(){
+    clusterGroup.clearLayers();
+    segments.forEach(function(s){if(s.line)map.removeLayer(s.line)});
+    winterGroup.clearLayers();
+    repairs.forEach(function(r){if(r.line)map.removeLayer(r.line)});
+    potholes=[];segments=[];winterReports=[];repairs=[];
+    if(winterPotholesShown)buildWinterPotholesLayer();
+    updateCounter();
+    showToast('💥 ВСЁ удалено');
   }).catch(function(e){console.error(e);showToast('⚠️ '+(e.message||'Не удалось'))});
 });
 statsBtn.addEventListener('click',function(){renderStats();statsModalOverlay.classList.add('show')});
@@ -912,20 +988,8 @@ slushBtn.addEventListener('click',function(){startWinterMode('slush')});
 blockedBtn.addEventListener('click',function(){startWinterMode('blocked')});
 repairBtn.addEventListener('click',function(){if(addingMode){addingMode=false;addBtn.textContent='🕳️ Яма';addBtn.style.background='linear-gradient(135deg,#6a5acd 0%,#483d8b 100%)';document.body.classList.remove('map-adding')}if(segmentMode)cancelSegMode();if(winterAddType)cancelWinterMode();if(repairMode){cancelRepairMode();return}repairMode=true;repairPoints=[];repairMarkers=[];repairBtn.textContent='✕ Отмена';repairBtn.style.background='linear-gradient(135deg,#ff4757 0%,#c0392b 100%)';repairSubtitle.textContent='Ткните первую точку ремонта';repairPanel.classList.add('show');hintEl.classList.remove('hidden');hintEl.textContent='Ткните точки вдоль отремонтированного участка'});
 function cancelRepairMode(){repairMode=false;repairPoints=[];repairMarkers.forEach(function(m){map.removeLayer(m)});repairMarkers=[];if(repairDraftLine){map.removeLayer(repairDraftLine);repairDraftLine=null}repairDraftHighlight.forEach(function(h){map.removeLayer(h)});repairDraftHighlight=[];repairBtn.textContent='✅ Ремонт';repairBtn.style.background='linear-gradient(135deg,#2ecc71 0%,#27ae60 100%)';repairPanel.classList.remove('show');hintEl.classList.add('hidden')}
-repairUndo.addEventListener('click',function(){
-  if(repairPoints.length===0){showToast('⚠️ Точек пока нет');return}
-  repairPoints.pop();
-  var m=repairMarkers.pop();
-  if(m)map.removeLayer(m);
-  if(repairPoints.length<2&&repairDraftLine){map.removeLayer(repairDraftLine);repairDraftLine=null}
-  else if(repairPoints.length>=2){repairDraftLine.setLatLngs(repairPoints)}
-  updateRepairHighlight();
-  updateRepairSubtitle();
-});
-repairExit.addEventListener('click',function(){
-  cancelRepairMode();
-  showToast('Отменено');
-});
+repairUndo.addEventListener('click',function(){if(repairPoints.length===0){showToast('⚠️ Точек пока нет');return}repairPoints.pop();var m=repairMarkers.pop();if(m)map.removeLayer(m);if(repairPoints.length<2&&repairDraftLine){map.removeLayer(repairDraftLine);repairDraftLine=null}else if(repairPoints.length>=2){repairDraftLine.setLatLngs(repairPoints)}updateRepairHighlight();updateRepairSubtitle();});
+repairExit.addEventListener('click',function(){cancelRepairMode();showToast('Отменено');});
 function updateRepairSubtitle(){var n=repairPoints.length;if(n===0)repairSubtitle.textContent='Ткните первую точку ремонта';else if(n===1)repairSubtitle.textContent='Ткните следующую точку';else repairSubtitle.textContent='Точек: '+n+' · ям рядом: '+repairDraftHighlight.length}
 function updateRepairHighlight(){repairDraftHighlight.forEach(function(h){map.removeLayer(h)});repairDraftHighlight=[];if(repairPoints.length<2)return;var nb=getPotholesNearLine(repairPoints,REPAIR_LINE_RADIUS);nb.forEach(function(p){var hi=L.divIcon({className:'',html:'<div class="pothole-highlight"></div>',iconSize:[26,26],iconAnchor:[13,13]});var hm=L.marker([p.lat,p.lng],{icon:hi,interactive:false}).addTo(map);repairDraftHighlight.push(hm)})}
 repairSave.addEventListener('click',function(){if(repairPoints.length<2){showToast('⚠️ Нужно минимум 2 точки');return}repairDescInput.value='';repairDescOverlay.classList.add('show');setTimeout(function(){repairDescInput.focus()},100)});
@@ -1061,11 +1125,7 @@ function doSuggest(){
         var key=lat.toFixed(4)+','+lng.toFixed(4);
         if(seen[key])return;seen[key]=true;
         var parts=(x.display_name||'').split(',');
-        items.push({
-          lat:lat,lng:lng,
-          title:(parts[0]||'').trim()||'Без названия',
-          addr:parts.slice(1,4).join(',').trim()
-        });
+        items.push({lat:lat,lng:lng,title:(parts[0]||'').trim()||'Без названия',addr:parts.slice(1,4).join(',').trim()});
       });
       if(!items.length){hideSuggestions();return}
       searchSuggestions.innerHTML='';
@@ -1074,38 +1134,17 @@ function doSuggest(){
         el.className='search-suggestion';
         el.innerHTML='<div class="search-suggestion-title">'+esc(x.title)+'</div>'
           +'<div class="search-suggestion-addr">'+esc(x.addr||'')+'</div>';
-        el.addEventListener('mousedown',function(ev){
-          ev.preventDefault();
-          searchInput.value=x.title;
-          hideSuggestions();
-          goToSearch(x);
-          searchInput.blur();
-        });
-        el.addEventListener('touchstart',function(ev){
-          ev.preventDefault();
-          searchInput.value=x.title;
-          hideSuggestions();
-          goToSearch(x);
-          searchInput.blur();
-        },{passive:false});
+        el.addEventListener('mousedown',function(ev){ev.preventDefault();searchInput.value=x.title;hideSuggestions();goToSearch(x);searchInput.blur();});
+        el.addEventListener('touchstart',function(ev){ev.preventDefault();searchInput.value=x.title;hideSuggestions();goToSearch(x);searchInput.blur();},{passive:false});
         searchSuggestions.appendChild(el);
       });
       searchSuggestions.classList.add('show');
     })
     .catch(function(){suggestBusy=false;hideSuggestions()});
 }
-searchInput.addEventListener('input',function(){
-  clearTimeout(suggestTimer);
-  var v=searchInput.value.trim();
-  if(v.length<4){hideSuggestions();return}
-  suggestTimer=setTimeout(doSuggest,700);
-});
-searchInput.addEventListener('blur',function(){
-  setTimeout(hideSuggestions,200);
-});
-searchInput.addEventListener('focus',function(){
-  if(searchInput.value.trim().length>=4)doSuggest();
-});
+searchInput.addEventListener('input',function(){clearTimeout(suggestTimer);var v=searchInput.value.trim();if(v.length<4){hideSuggestions();return}suggestTimer=setTimeout(doSuggest,700);});
+searchInput.addEventListener('blur',function(){setTimeout(hideSuggestions,200);});
+searchInput.addEventListener('focus',function(){if(searchInput.value.trim().length>=4)doSuggest();});
 map.on('popupopen',function(){hintEl.classList.add('hidden')});
 map.on('click',function(e){var lat=e.latlng.lat,lng=e.latlng.lng;
 if(repairMode){repairPoints.push([lat,lng]);var ptIcon=L.divIcon({className:'',html:'<div class="repair-point"></div>',iconSize:[20,20],iconAnchor:[10,10]});var pm=L.marker([lat,lng],{icon:ptIcon}).addTo(map);repairMarkers.push(pm);if(repairPoints.length>=2){if(repairDraftLine)map.removeLayer(repairDraftLine);repairDraftLine=L.polyline(repairPoints,{color:'#2ecc71',weight:6,opacity:.7,dashArray:'8,6'}).addTo(map);updateRepairHighlight()}updateRepairSubtitle();return}
@@ -1127,9 +1166,7 @@ if(draftMarker){map.removeLayer(draftMarker);draftMarker=null}draftPanel.classLi
 var isBad=isBadRepairNearby(lat,lng);
 var initialStatus=isBad?'bad_repair':'active';
 row.status=initialStatus;row.confirmations=row.confirmations||1;row.comment=row.comment||'';
-if(isBad){
-fetch(SUPABASE_URL+'/rest/v1/'+TABLE_POTHOLES+'?id=eq.'+row.id,{method:'PATCH',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json'},body:JSON.stringify({status:'bad_repair'})}).catch(function(e){console.error(e)});
-}
+if(isBad){fetch(SUPABASE_URL+'/rest/v1/'+TABLE_POTHOLES+'?id=eq.'+row.id,{method:'PATCH',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json'},body:JSON.stringify({status:'bad_repair'})}).catch(function(e){console.error(e)});}
 var m=createPotholeMarker(row);potholes.push({id:row.id,lat:row.lat,lng:row.lng,description:row.description,severity:row.severity,confirmations:row.confirmations,status:row.status,fixed_at:row.fixed_at,comment:row.comment,repair_type:row.repair_type,repair_id:row.repair_id,marker:m});
 updateCounter();var ic=isInCity(lat,lng);
 if(isBad)showToast('🔥 Это плохой ремонт — тут уже заделывали');
@@ -1150,6 +1187,7 @@ function reallyDeletePothole(id){
   authDelete(TABLE_POTHOLES,id).then(function(){
     var i=potholes.findIndex(function(p){return p.id===id});
     if(i!==-1){clusterGroup.removeLayer(potholes[i].marker);potholes.splice(i,1)}
+    if(winterPotholesShown)buildWinterPotholesLayer();
     updateCounter();showToast('🗑 Яма удалена');
   }).catch(function(e){console.error(e);showToast('⚠️ '+(e.message||'Не удалось'))});
 }
@@ -1157,6 +1195,7 @@ function reallyDeleteSegment(id){
   authDelete(TABLE_SEGMENTS,id).then(function(){
     var i=segments.findIndex(function(s){return s.id===id});
     if(i!==-1){map.removeLayer(segments[i].line);segments.splice(i,1)}
+    if(winterPotholesShown)buildWinterPotholesLayer();
     updateCounter();showToast('🗑 Участок удалён');
   }).catch(function(e){console.error(e);showToast('⚠️ '+(e.message||'Не удалось'))});
 }
@@ -1197,13 +1236,8 @@ fetch(SUPABASE_URL+'/rest/v1/'+TABLE_WINTER+'?select=*&order=created_at.desc',{h
 fetch(SUPABASE_URL+'/rest/v1/'+TABLE_REPAIRS+'?select=*&order=created_at.desc',{headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}}).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(data){repairs.forEach(function(r){if(r.line)map.removeLayer(r.line)});repairs=[];data.forEach(function(row){var line=createRepairLine(row);repairs.push({id:row.id,coords:row.coords,description:row.description,created_at:row.created_at,line:line})})}).catch(function(e){console.error('Repairs:',e)})}
 authData=loadAuth();
 updateBadgeForAuth();
-if(authData){
-  if(isAuthValid()){
-    // Токен ещё жив
-  }else{
-    refreshAuth().catch(function(){clearAuth();updateBadgeForAuth()});
-  }
-}
+if(authData&&!isAuthValid()){refreshAuth().catch(function(){clearAuth();updateBadgeForAuth()});}
+loadMaintenance();
 loadAll();
 setTimeout(function(){hintEl.classList.add('hidden')},6000);
 window.addEventListener('resize',function(){if(bottomPanel)mapBtnsRight.style.bottom=(bottomPanel.offsetHeight+12)+'px'});
